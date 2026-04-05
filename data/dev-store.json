@@ -1,0 +1,218 @@
+{
+  "businesses": [
+    {
+      "id": "biz_1",
+      "name": "Business 1",
+      "businessType": "retail",
+      "ownerPhone": "+2348000000000",
+      "status": "active",
+      "pilotStage": "safe_launch",
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    },
+    {
+      "id": "biz_2",
+      "name": "Business 2",
+      "businessType": "retail",
+      "ownerPhone": "+2348000000000",
+      "status": "active",
+      "pilotStage": "safe_launch",
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    },
+    {
+      "id": "biz_3",
+      "name": "Business 3",
+      "businessType": "retail",
+      "ownerPhone": "+2348000000000",
+      "status": "active",
+      "pilotStage": "safe_launch",
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    }
+  ],
+  "subaccounts": [
+    {
+      "id": "sub_1",
+      "businessId": "biz_1",
+      "zendfiSubaccountId": "zend_sub_1",
+      "walletAddress": "wallet_1",
+      "status": "active",
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    },
+    {
+      "id": "sub_2",
+      "businessId": "biz_2",
+      "zendfiSubaccountId": "zend_sub_2",
+      "walletAddress": "wallet_2",
+      "status": "active",
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    },
+    {
+      "id": "sub_3",
+      "businessId": "biz_3",
+      "zendfiSubaccountId": "zend_sub_3",
+      "walletAddress": "wallet_3",
+      "status": "active",
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "sup_1",
+      "businessId": "biz_1",
+      "supplierName": "Supplier 1",
+      "bankId": "OPAY",
+      "accountNumber": "0000000001",
+      "accountName": "Supplier 1",
+      "enabled": true,
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    },
+    {
+      "id": "sup_2",
+      "businessId": "biz_2",
+      "supplierName": "Supplier 2",
+      "bankId": "OPAY",
+      "accountNumber": "0000000002",
+      "accountName": "Supplier 2",
+      "enabled": true,
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    },
+    {
+      "id": "sup_3",
+      "businessId": "biz_3",
+      "supplierName": "Supplier 3",
+      "bankId": "OPAY",
+      "accountNumber": "0000000003",
+      "accountName": "Supplier 3",
+      "enabled": true,
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    }
+  ],
+  "policyVersions": [
+    {
+      "id": "pol_1",
+      "businessId": "biz_1",
+      "status": "active",
+      "maxPerTxNgn": 50000,
+      "dailyCapNgn": 200000,
+      "approvalThresholdNgn": 30000,
+      "activeDaysUtc": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "activeStartTimeUtc": "00:00",
+      "activeEndTimeUtc": "23:59",
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "activatedAt": "2026-04-05T17:20:48.176Z"
+    },
+    {
+      "id": "pol_2",
+      "businessId": "biz_2",
+      "status": "active",
+      "maxPerTxNgn": 50000,
+      "dailyCapNgn": 200000,
+      "approvalThresholdNgn": 30000,
+      "activeDaysUtc": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "activeStartTimeUtc": "00:00",
+      "activeEndTimeUtc": "23:59",
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "activatedAt": "2026-04-05T17:20:48.176Z"
+    },
+    {
+      "id": "pol_3",
+      "businessId": "biz_3",
+      "status": "active",
+      "maxPerTxNgn": 50000,
+      "dailyCapNgn": 200000,
+      "approvalThresholdNgn": 30000,
+      "activeDaysUtc": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "activeStartTimeUtc": "00:00",
+      "activeEndTimeUtc": "23:59",
+      "createdAt": "2026-04-05T17:20:48.176Z",
+      "activatedAt": "2026-04-05T17:20:48.176Z"
+    }
+  ],
+  "dailySpendCounters": [],
+  "payoutIntents": [],
+  "payoutExecutions": [
+    {
+      "id": "exec_ok",
+      "intentId": "pi_1",
+      "businessId": "biz_1",
+      "supplierId": "sup_1",
+      "status": "completed",
+      "createdAt": "2026-04-05T17:20:43.176Z",
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    }
+  ],
+  "activityEvents": [],
+  "webhookInbox": [
+    {
+      "id": "wh_ok",
+      "provider": "zendfi",
+      "eventId": "evt_ok",
+      "eventType": "WithdrawalCompleted",
+      "signature": "sig",
+      "status": "processed",
+      "receivedAt": "2026-04-05T17:20:48.176Z",
+      "processedAt": "2026-04-05T17:20:48.176Z",
+      "payload": {}
+    }
+  ],
+  "retryJobs": [],
+  "ownerNotifications": [],
+  "pilotModes": [
+    {
+      "businessId": "biz_1",
+      "mode": "assisted",
+      "maxAutoExecutions": 3,
+      "autoExecutedCount": 0,
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    },
+    {
+      "businessId": "biz_2",
+      "mode": "assisted",
+      "maxAutoExecutions": 3,
+      "autoExecutedCount": 0,
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    },
+    {
+      "businessId": "biz_3",
+      "mode": "assisted",
+      "maxAutoExecutions": 3,
+      "autoExecutedCount": 0,
+      "updatedAt": "2026-04-05T17:20:48.176Z"
+    }
+  ],
+  "aiCommands": [],
+  "alerts": [],
+  "credentialRotations": []
+}
