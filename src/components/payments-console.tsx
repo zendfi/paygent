@@ -130,8 +130,13 @@ export function PaymentsConsole() {
     useState<BusinessDetailResponse | null>(null);
   const [responseLog, setResponseLog] = useState<string>("No actions yet.");
   const [lastErrorMessage, setLastErrorMessage] = useState<string>("");
-  const [ownerTokenInput, setOwnerTokenInput] = useState<string>("");
+  const [authEmail, setAuthEmail] = useState<string>("");
+  const [authPassword, setAuthPassword] = useState<string>("");
+  const [authSessionEmail, setAuthSessionEmail] = useState<string>("");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"onboarding" | "payouts" | "operations" | "logs">(
+    "onboarding",
+  );
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
 
   const [newBusinessName, setNewBusinessName] = useState("Sani Retail");
@@ -199,40 +204,70 @@ export function PaymentsConsole() {
 
   const refreshAuthState = useCallback(async () => {
     const response = await fetch("/api/auth/session", { cache: "no-store" });
-    const data = (await response.json()) as { authenticated?: boolean };
+    const data = (await response.json()) as {
+      authenticated?: boolean;
+      session?: { email?: string } | null;
+    };
     setIsAuthenticated(Boolean(data.authenticated));
+    setAuthSessionEmail(data.session?.email ?? "");
     return data;
   }, []);
 
-  const authenticateOwner = useCallback(async () => {
-    if (!ownerTokenInput.trim()) {
-      writeLog({ error: "invalid_request", message: "Owner token is required." });
+  const registerOwner = useCallback(async () => {
+    if (!authEmail.trim() || !authPassword.trim()) {
+      writeLog({ error: "invalid_request", message: "Email and password are required." });
       return;
     }
 
-    const response = await fetch("/api/auth/session", {
+    const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ token: ownerTokenInput.trim() }),
+      body: JSON.stringify({
+        email: authEmail.trim().toLowerCase(),
+        password: authPassword,
+      }),
+    });
+
+    const data = await response.json();
+    writeLog(data);
+  }, [authEmail, authPassword, writeLog]);
+
+  const loginOwner = useCallback(async () => {
+    if (!authEmail.trim() || !authPassword.trim()) {
+      writeLog({ error: "invalid_request", message: "Email and password are required." });
+      return;
+    }
+
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: authEmail.trim().toLowerCase(),
+        password: authPassword,
+      }),
     });
 
     const data = await response.json();
     writeLog(data);
     if (response.ok) {
-      setOwnerTokenInput("");
       setIsAuthenticated(true);
+      setAuthSessionEmail(data?.session?.email ?? authEmail.trim().toLowerCase());
+      setAuthPassword("");
     }
-  }, [ownerTokenInput, writeLog]);
+  }, [authEmail, authPassword, writeLog]);
 
   const logoutOwner = useCallback(async () => {
-    const response = await fetch("/api/auth/session", {
-      method: "DELETE",
+    const response = await fetch("/api/auth/logout", {
+      method: "POST",
     });
     const data = await response.json();
     writeLog(data);
     setIsAuthenticated(false);
+    setAuthSessionEmail("");
   }, [writeLog]);
 
   const refreshBusinesses = useCallback(async () => {
@@ -720,27 +755,41 @@ export function PaymentsConsole() {
       <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-4">
         <p className="text-sm font-semibold text-slate-200">Owner Authentication</p>
         <p className="mt-1 text-xs text-slate-400">
-          Authenticate once with your owner token to unlock protected API actions.
+          Create an owner account and sign in with email/password to unlock protected actions.
         </p>
         <div className="mt-3 grid gap-2 sm:grid-cols-4">
           <input
+            type="email"
+            value={authEmail}
+            onChange={(event) => setAuthEmail(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+            placeholder="owner@company.com"
+          />
+          <input
             type="password"
-            value={ownerTokenInput}
-            onChange={(event) => setOwnerTokenInput(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm sm:col-span-2"
-            placeholder="Enter PAYGENT_OWNER_API_TOKEN"
+            value={authPassword}
+            onChange={(event) => setAuthPassword(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+            placeholder="Minimum 8 characters"
           />
           <button
             type="button"
-            onClick={authenticateOwner}
+            onClick={registerOwner}
+            className="rounded-md border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-200"
+          >
+            Sign Up
+          </button>
+          <button
+            type="button"
+            onClick={loginOwner}
             className="rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-900"
           >
-            Authenticate
+            Login
           </button>
           <button
             type="button"
             onClick={logoutOwner}
-            className="rounded-md border border-slate-600 px-3 py-2 text-sm"
+            className="rounded-md border border-slate-600 px-3 py-2 text-sm sm:col-span-2"
           >
             Logout
           </button>
@@ -750,14 +799,61 @@ export function PaymentsConsole() {
               const data = await refreshAuthState();
               writeLog(data);
             }}
-            className="rounded-md border border-slate-600 px-3 py-2 text-sm sm:col-span-4"
+            className="rounded-md border border-slate-600 px-3 py-2 text-sm sm:col-span-2"
           >
             Check Session
           </button>
         </div>
         <p className="mt-2 text-xs text-slate-300">
-          Session status: {isAuthenticated ? "authenticated" : "not authenticated"}
+          Session status: {isAuthenticated ? `authenticated (${authSessionEmail})` : "not authenticated"}
         </p>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-4">
+        <button
+          type="button"
+          onClick={() => setActiveTab("onboarding")}
+          className={`rounded-md px-3 py-2 text-sm font-semibold ${
+            activeTab === "onboarding"
+              ? "bg-emerald-300 text-slate-950"
+              : "border border-slate-600 text-slate-200"
+          }`}
+        >
+          Onboarding
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("payouts")}
+          className={`rounded-md px-3 py-2 text-sm font-semibold ${
+            activeTab === "payouts"
+              ? "bg-emerald-300 text-slate-950"
+              : "border border-slate-600 text-slate-200"
+          }`}
+        >
+          Payouts
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("operations")}
+          className={`rounded-md px-3 py-2 text-sm font-semibold ${
+            activeTab === "operations"
+              ? "bg-emerald-300 text-slate-950"
+              : "border border-slate-600 text-slate-200"
+          }`}
+        >
+          Operations
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("logs")}
+          className={`rounded-md px-3 py-2 text-sm font-semibold ${
+            activeTab === "logs"
+              ? "bg-emerald-300 text-slate-950"
+              : "border border-slate-600 text-slate-200"
+          }`}
+        >
+          Logs
+        </button>
       </div>
 
       {lastErrorMessage ? (
@@ -766,6 +862,8 @@ export function PaymentsConsole() {
         </div>
       ) : null}
 
+      {activeTab === "onboarding" ? (
+        <>
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
           <p className="text-sm font-semibold text-slate-200">Create Business</p>
@@ -869,6 +967,98 @@ export function PaymentsConsole() {
         </button>
       </div>
 
+      <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
+        <p className="text-sm font-semibold text-slate-200">Supplier Whitelist</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <input
+            value={supplierName}
+            onChange={(event) => setSupplierName(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+            placeholder="Supplier name"
+          />
+          <input
+            value={supplierBankId}
+            onChange={(event) => setSupplierBankId(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+            placeholder="Bank id"
+          />
+          <input
+            value={supplierAccountNumber}
+            onChange={(event) => setSupplierAccountNumber(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+            placeholder="Account number"
+          />
+          <input
+            value={supplierAccountName}
+            onChange={(event) => setSupplierAccountName(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+            placeholder="Account name"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={addSupplier}
+          className="mt-3 rounded-md bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900"
+        >
+          Add Supplier
+        </button>
+      </div>
+
+      <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
+        <p className="text-sm font-semibold text-slate-200">Policy Activation</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <input
+            value={policyMaxPerTx}
+            onChange={(event) => setPolicyMaxPerTx(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+            placeholder="Max per tx (NGN)"
+          />
+          <input
+            value={policyDailyCap}
+            onChange={(event) => setPolicyDailyCap(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+            placeholder="Daily cap (NGN)"
+          />
+          <input
+            value={policyApprovalThreshold}
+            onChange={(event) => setPolicyApprovalThreshold(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+            placeholder="Approval threshold (NGN)"
+          />
+          <input
+            value={policyDays}
+            onChange={(event) => setPolicyDays(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm sm:col-span-2"
+            placeholder="Active days UTC (e.g. 1,2,3,4,5,6)"
+          />
+          <div className="flex gap-2">
+            <input
+              value={policyStartTime}
+              onChange={(event) => setPolicyStartTime(event.target.value)}
+              className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+              placeholder="Start (HH:mm)"
+            />
+            <input
+              value={policyEndTime}
+              onChange={(event) => setPolicyEndTime(event.target.value)}
+              className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
+              placeholder="End (HH:mm)"
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={activatePolicy}
+          className="mt-3 rounded-md bg-cyan-300 px-3 py-2 text-sm font-semibold text-slate-900"
+        >
+          Activate Policy
+        </button>
+      </div>
+        </>
+      ) : null}
+
+      {activeTab === "operations" ? (
+        <>
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <button
           type="button"
@@ -1044,44 +1234,11 @@ export function PaymentsConsole() {
           </button>
         </div>
       </div>
+        </>
+      ) : null}
 
-      <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">Supplier Whitelist</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <input
-            value={supplierName}
-            onChange={(event) => setSupplierName(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Supplier name"
-          />
-          <input
-            value={supplierBankId}
-            onChange={(event) => setSupplierBankId(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Bank id"
-          />
-          <input
-            value={supplierAccountNumber}
-            onChange={(event) => setSupplierAccountNumber(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Account number"
-          />
-          <input
-            value={supplierAccountName}
-            onChange={(event) => setSupplierAccountName(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Account name"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={addSupplier}
-          className="mt-3 rounded-md bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900"
-        >
-          Add Supplier
-        </button>
-      </div>
-
+      {activeTab === "payouts" ? (
+        <>
       <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
         <p className="text-sm font-semibold text-slate-200">AI Command Parser</p>
         <textarea
@@ -1167,57 +1324,6 @@ export function PaymentsConsole() {
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">Policy Activation</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <input
-            value={policyMaxPerTx}
-            onChange={(event) => setPolicyMaxPerTx(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Max per tx (NGN)"
-          />
-          <input
-            value={policyDailyCap}
-            onChange={(event) => setPolicyDailyCap(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Daily cap (NGN)"
-          />
-          <input
-            value={policyApprovalThreshold}
-            onChange={(event) => setPolicyApprovalThreshold(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Approval threshold (NGN)"
-          />
-          <input
-            value={policyDays}
-            onChange={(event) => setPolicyDays(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm sm:col-span-2"
-            placeholder="Active days UTC (e.g. 1,2,3,4,5,6)"
-          />
-          <div className="flex gap-2">
-            <input
-              value={policyStartTime}
-              onChange={(event) => setPolicyStartTime(event.target.value)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-              placeholder="Start (HH:mm)"
-            />
-            <input
-              value={policyEndTime}
-              onChange={(event) => setPolicyEndTime(event.target.value)}
-              className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-              placeholder="End (HH:mm)"
-            />
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={activatePolicy}
-          className="mt-3 rounded-md bg-cyan-300 px-3 py-2 text-sm font-semibold text-slate-900"
-        >
-          Activate Policy
-        </button>
-      </div>
-
-      <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
         <p className="text-sm font-semibold text-slate-200">Evaluate Payout Intent</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <select
@@ -1253,7 +1359,11 @@ export function PaymentsConsole() {
           Evaluate Intent
         </button>
       </div>
+        </>
+      ) : null}
 
+      {activeTab === "logs" ? (
+        <>
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-300">
           <p className="text-xs uppercase tracking-wider text-slate-400">Business State</p>
@@ -1373,6 +1483,8 @@ export function PaymentsConsole() {
           </ul>
         </div>
       </div>
+        </>
+      ) : null}
     </section>
   );
 }

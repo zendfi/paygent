@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { OWNER_SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session";
 
-const PUBLIC_ROUTES = ["/api/health", "/api/webhooks/zendfi", "/api/auth/session"];
-const OWNER_SESSION_COOKIE = "paygent_owner_session";
+const PUBLIC_ROUTES = [
+  "/api/health",
+  "/api/webhooks/zendfi",
+  "/api/auth/session",
+  "/api/auth/register",
+  "/api/auth/login",
+  "/api/auth/logout",
+];
 
 function isPublicApiRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -26,7 +33,7 @@ function readSessionToken(request: NextRequest): string | undefined {
   return value || undefined;
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (!pathname.startsWith("/api/")) {
@@ -54,7 +61,8 @@ export function proxy(request: NextRequest) {
 
   const bearerToken = readBearerToken(request);
   const sessionToken = readSessionToken(request);
-  const authorized = bearerToken === expectedToken || sessionToken === expectedToken;
+  const session = sessionToken ? await verifySessionToken(sessionToken) : null;
+  const authorized = bearerToken === expectedToken || Boolean(session);
 
   if (!authorized) {
     return NextResponse.json(

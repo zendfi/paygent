@@ -172,6 +172,16 @@ export type CredentialRotationRecord = {
   notes?: string;
 };
 
+export type AuthUserRecord = {
+  id: string;
+  email: string;
+  passwordHash: string;
+  role: "owner";
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt?: string;
+};
+
 export type ActivityEvent = {
   id: string;
   businessId: string;
@@ -215,4 +225,5 @@ export type PaygentStore = {
   aiCommands: AiCommandRecord[];
   alerts: AlertRecord[];
   credentialRotations: CredentialRotationRecord[];
+  authUsers?: AuthUserRecord[];
 };

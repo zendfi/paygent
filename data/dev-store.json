@@ -1,70 +1,30 @@
 {
-  "businesses": [
-    {
-      "id": "biz_1",
-      "name": "Demo",
-      "businessType": "retail",
-      "ownerPhone": "+2348000000000",
-      "status": "active",
-      "pilotStage": "safe_launch",
-      "createdAt": "2026-04-05T18:05:11.248Z",
-      "updatedAt": "2026-04-05T18:05:11.248Z"
-    }
-  ],
+  "businesses": [],
   "subaccounts": [],
   "suppliers": [],
   "policyVersions": [],
   "dailySpendCounters": [],
   "payoutIntents": [],
-  "payoutExecutions": [
-    {
-      "id": "exec_ok",
-      "intentId": "pi_1",
-      "businessId": "biz_1",
-      "supplierId": "sup_1",
-      "status": "completed",
-      "createdAt": "2026-04-05T18:05:01.248Z",
-      "updatedAt": "2026-04-05T18:05:11.248Z"
-    },
-    {
-      "id": "exec_fail",
-      "intentId": "pi_2",
-      "businessId": "biz_1",
-      "supplierId": "sup_1",
-      "status": "failed",
-      "createdAt": "2026-04-05T18:05:01.248Z",
-      "updatedAt": "2026-04-05T18:05:11.248Z"
-    }
-  ],
+  "payoutExecutions": [],
   "activityEvents": [],
-  "webhookInbox": [
-    {
-      "id": "wh_1",
-      "provider": "zendfi",
-      "eventId": "evt_1",
-      "eventType": "WithdrawalCompleted",
-      "signature": "sig",
-      "status": "processed",
-      "receivedAt": "2026-04-05T18:05:11.248Z",
-      "processedAt": "2026-04-05T18:05:11.248Z",
-      "payload": {}
-    },
-    {
-      "id": "wh_2",
-      "provider": "zendfi",
-      "eventId": "evt_2",
-      "eventType": "Unknown",
-      "signature": "sig",
-      "status": "ignored",
-      "receivedAt": "2026-04-05T18:05:11.248Z",
-      "processedAt": "2026-04-05T18:05:11.248Z",
-      "payload": {}
-    }
-  ],
+  "webhookInbox": [],
   "retryJobs": [],
   "ownerNotifications": [],
   "pilotModes": [],
   "aiCommands": [],
   "alerts": [],
-  "credentialRotations": []
+  "credentialRotations": [
+    {
+      "id": "rot_965e46264efe4326",
+      "credentialType": "owner_api_token",
+      "status": "completed",
+      "requestedBy": "ops-owner",
+      "reason": "security_remediation",
+      "requestedAt": "2026-04-05T18:17:18.620Z",
+      "completedAt": "2026-04-05T18:17:18.626Z",
+      "nextDueAt": "2026-05-05T18:17:18.626Z",
+      "notes": "rotated_and_verified"
+    }
+  ],
+  "authUsers": []
 }

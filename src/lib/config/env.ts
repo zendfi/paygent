@@ -5,6 +5,7 @@ export type PaygentEnv = {
   nodeEnv: NodeEnv;
   storageBackend: StorageBackend;
   databaseUrl?: string;
+  authSessionSecret?: string;
   appUrl: string;
   ownerApiToken?: string;
   zendfiApiBaseUrl: string;
@@ -65,6 +66,10 @@ function validateProductionEnv(env: PaygentEnv): void {
   if (env.storageBackend === "postgres" && !env.databaseUrl) {
     throw new Error("DATABASE_URL is required when PAYGENT_STORAGE_BACKEND=postgres");
   }
+
+  if (!env.authSessionSecret) {
+    throw new Error("PAYGENT_AUTH_SESSION_SECRET is required in production");
+  }
 }
 
 export function getEnv(): PaygentEnv {
@@ -73,6 +78,7 @@ export function getEnv(): PaygentEnv {
     nodeEnv,
     storageBackend: readStorageBackend(),
     databaseUrl: process.env.DATABASE_URL,
+    authSessionSecret: process.env.PAYGENT_AUTH_SESSION_SECRET,
     appUrl: process.env.APP_URL ?? "http://localhost:3000",
     ownerApiToken: process.env.PAYGENT_OWNER_API_TOKEN,
     zendfiApiBaseUrl: process.env.ZENDFI_API_BASE_URL ?? "https://api.zendfi.tech/api/v1",

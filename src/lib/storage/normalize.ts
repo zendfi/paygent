@@ -16,6 +16,7 @@ export const EMPTY_STORE: PaygentStore = {
   aiCommands: [],
   alerts: [],
   credentialRotations: [],
+  authUsers: [],
 };
 
 export function normalizeStore(parsed: Partial<PaygentStore>): PaygentStore {
@@ -35,5 +36,6 @@ export function normalizeStore(parsed: Partial<PaygentStore>): PaygentStore {
     aiCommands: parsed.aiCommands ?? [],
     alerts: parsed.alerts ?? [],
     credentialRotations: parsed.credentialRotations ?? [],
+    authUsers: parsed.authUsers ?? [],
   };
 }
