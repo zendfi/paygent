@@ -49,7 +49,20 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     return null;
   }
 
-  const [normalizedEmail, expRaw, signature] = token.split(".");
+  const lastDot = token.lastIndexOf(".");
+  if (lastDot <= 0) {
+    return null;
+  }
+
+  const secondLastDot = token.lastIndexOf(".", lastDot - 1);
+  if (secondLastDot <= 0) {
+    return null;
+  }
+
+  const normalizedEmail = token.slice(0, secondLastDot);
+  const expRaw = token.slice(secondLastDot + 1, lastDot);
+  const signature = token.slice(lastDot + 1);
+
   if (!normalizedEmail || !expRaw || !signature) {
     return null;
   }
