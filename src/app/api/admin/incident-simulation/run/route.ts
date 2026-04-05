@@ -1,5 +1,5 @@
 import { errorResponse, unknownErrorToApiPayload } from "@/lib/http/errors";
-import { runIncidentSimulation } from "@/lib/services/week8-readiness";
+import { runIncidentSimulation } from "@/lib/services/readiness";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {

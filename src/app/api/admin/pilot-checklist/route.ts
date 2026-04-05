@@ -1,4 +1,4 @@
-import { getPilotChecklist } from "@/lib/services/week8-readiness";
+import { getPilotChecklist } from "@/lib/services/readiness";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {

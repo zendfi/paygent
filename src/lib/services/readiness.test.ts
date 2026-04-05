@@ -4,7 +4,7 @@ import {
   getLaunchRecommendation,
   getPilotChecklist,
   runIncidentSimulation,
-} from "@/lib/services/week8-readiness";
+} from "@/lib/services/readiness";
 import { writeStore } from "@/lib/storage/store";
 import type { PaygentStore } from "@/lib/storage/types";
 

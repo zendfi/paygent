@@ -123,7 +123,7 @@ type ActivityResponse = {
   notifications: OwnerNotification[];
 };
 
-export function Week2Console() {
+export function PaymentsConsole() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
   const [selectedBusinessDetail, setSelectedBusinessDetail] =
@@ -662,7 +662,7 @@ export function Week2Console() {
   return (
     <section className="mt-8 rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold text-white">Week 8 Live Console</h2>
+        <h2 className="text-xl font-semibold text-white">Live Console</h2>
         <button
           type="button"
           className="rounded-lg border border-emerald-400/50 bg-emerald-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-300"
