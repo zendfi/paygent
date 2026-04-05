@@ -130,6 +130,8 @@ export function PaymentsConsole() {
     useState<BusinessDetailResponse | null>(null);
   const [responseLog, setResponseLog] = useState<string>("No actions yet.");
   const [lastErrorMessage, setLastErrorMessage] = useState<string>("");
+  const [ownerTokenInput, setOwnerTokenInput] = useState<string>("");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
 
   const [newBusinessName, setNewBusinessName] = useState("Sani Retail");
@@ -194,6 +196,44 @@ export function PaymentsConsole() {
 
     setResponseLog(JSON.stringify(payload, null, 2));
   }, []);
+
+  const refreshAuthState = useCallback(async () => {
+    const response = await fetch("/api/auth/session", { cache: "no-store" });
+    const data = (await response.json()) as { authenticated?: boolean };
+    setIsAuthenticated(Boolean(data.authenticated));
+    return data;
+  }, []);
+
+  const authenticateOwner = useCallback(async () => {
+    if (!ownerTokenInput.trim()) {
+      writeLog({ error: "invalid_request", message: "Owner token is required." });
+      return;
+    }
+
+    const response = await fetch("/api/auth/session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ token: ownerTokenInput.trim() }),
+    });
+
+    const data = await response.json();
+    writeLog(data);
+    if (response.ok) {
+      setOwnerTokenInput("");
+      setIsAuthenticated(true);
+    }
+  }, [ownerTokenInput, writeLog]);
+
+  const logoutOwner = useCallback(async () => {
+    const response = await fetch("/api/auth/session", {
+      method: "DELETE",
+    });
+    const data = await response.json();
+    writeLog(data);
+    setIsAuthenticated(false);
+  }, [writeLog]);
 
   const refreshBusinesses = useCallback(async () => {
     const response = await fetch("/api/businesses", { cache: "no-store" });
@@ -675,6 +715,49 @@ export function PaymentsConsole() {
         >
           Refresh Data
         </button>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-4">
+        <p className="text-sm font-semibold text-slate-200">Owner Authentication</p>
+        <p className="mt-1 text-xs text-slate-400">
+          Authenticate once with your owner token to unlock protected API actions.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-4">
+          <input
+            type="password"
+            value={ownerTokenInput}
+            onChange={(event) => setOwnerTokenInput(event.target.value)}
+            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm sm:col-span-2"
+            placeholder="Enter PAYGENT_OWNER_API_TOKEN"
+          />
+          <button
+            type="button"
+            onClick={authenticateOwner}
+            className="rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-900"
+          >
+            Authenticate
+          </button>
+          <button
+            type="button"
+            onClick={logoutOwner}
+            className="rounded-md border border-slate-600 px-3 py-2 text-sm"
+          >
+            Logout
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              const data = await refreshAuthState();
+              writeLog(data);
+            }}
+            className="rounded-md border border-slate-600 px-3 py-2 text-sm sm:col-span-4"
+          >
+            Check Session
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-slate-300">
+          Session status: {isAuthenticated ? "authenticated" : "not authenticated"}
+        </p>
       </div>
 
       {lastErrorMessage ? (

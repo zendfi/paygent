@@ -2,111 +2,68 @@
   "businesses": [
     {
       "id": "biz_1",
-      "name": "Demo Biz",
+      "name": "Demo",
       "businessType": "retail",
       "ownerPhone": "+2348000000000",
       "status": "active",
       "pilotStage": "safe_launch",
-      "createdAt": "2026-04-05T17:57:48.981Z",
-      "updatedAt": "2026-04-05T17:57:48.981Z"
+      "createdAt": "2026-04-05T18:05:11.248Z",
+      "updatedAt": "2026-04-05T18:05:11.248Z"
     }
   ],
   "subaccounts": [],
-  "suppliers": [
-    {
-      "id": "sup_1",
-      "businessId": "biz_1",
-      "supplierName": "Supplier",
-      "bankId": "OPAY",
-      "accountNumber": "0123456789",
-      "accountName": "Supplier Name",
-      "enabled": true,
-      "createdAt": "2026-04-05T17:57:48.981Z",
-      "updatedAt": "2026-04-05T17:57:48.981Z"
-    }
-  ],
-  "policyVersions": [
-    {
-      "id": "pol_1",
-      "businessId": "biz_1",
-      "status": "active",
-      "maxPerTxNgn": 50000,
-      "dailyCapNgn": 200000,
-      "approvalThresholdNgn": 30000,
-      "activeDaysUtc": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6
-      ],
-      "activeStartTimeUtc": "00:00",
-      "activeEndTimeUtc": "23:59",
-      "createdAt": "2026-04-05T17:57:48.981Z",
-      "activatedAt": "2026-04-05T17:57:48.981Z"
-    }
-  ],
+  "suppliers": [],
+  "policyVersions": [],
   "dailySpendCounters": [],
-  "payoutIntents": [
+  "payoutIntents": [],
+  "payoutExecutions": [
     {
-      "id": "pi_16a4ff2e4ac64fc2",
+      "id": "exec_ok",
+      "intentId": "pi_1",
       "businessId": "biz_1",
       "supplierId": "sup_1",
-      "source": "owner_command",
-      "amountNgn": 10000,
-      "reason": "Stock",
-      "idempotencyKey": "idem_1",
-      "status": "approval_required",
-      "decision": {
-        "allowed": true,
-        "requiresApproval": false,
-        "reasonCodes": [
-          "safe_launch_control"
-        ]
-      },
-      "createdAt": "2026-04-05T17:57:49.000Z",
-      "updatedAt": "2026-04-05T17:57:49.000Z"
-    }
-  ],
-  "payoutExecutions": [],
-  "activityEvents": [
-    {
-      "id": "evt_e461295317e4435e",
-      "businessId": "biz_1",
-      "type": "payout_intent_created",
-      "message": "Payout intent created for supplier sup_1.",
-      "metadata": {
-        "intentId": "pi_16a4ff2e4ac64fc2",
-        "amountNgn": 10000,
-        "status": "approval_required"
-      },
-      "createdAt": "2026-04-05T17:57:49.010Z"
+      "status": "completed",
+      "createdAt": "2026-04-05T18:05:01.248Z",
+      "updatedAt": "2026-04-05T18:05:11.248Z"
     },
     {
-      "id": "evt_a638bfe9bb25496f",
+      "id": "exec_fail",
+      "intentId": "pi_2",
       "businessId": "biz_1",
-      "type": "payout_approval_required",
-      "message": "Payout intent pi_16a4ff2e4ac64fc2 requires owner approval.",
-      "metadata": {
-        "intentId": "pi_16a4ff2e4ac64fc2"
-      },
-      "createdAt": "2026-04-05T17:57:49.012Z"
+      "supplierId": "sup_1",
+      "status": "failed",
+      "createdAt": "2026-04-05T18:05:01.248Z",
+      "updatedAt": "2026-04-05T18:05:11.248Z"
     }
   ],
-  "webhookInbox": [],
+  "activityEvents": [],
+  "webhookInbox": [
+    {
+      "id": "wh_1",
+      "provider": "zendfi",
+      "eventId": "evt_1",
+      "eventType": "WithdrawalCompleted",
+      "signature": "sig",
+      "status": "processed",
+      "receivedAt": "2026-04-05T18:05:11.248Z",
+      "processedAt": "2026-04-05T18:05:11.248Z",
+      "payload": {}
+    },
+    {
+      "id": "wh_2",
+      "provider": "zendfi",
+      "eventId": "evt_2",
+      "eventType": "Unknown",
+      "signature": "sig",
+      "status": "ignored",
+      "receivedAt": "2026-04-05T18:05:11.248Z",
+      "processedAt": "2026-04-05T18:05:11.248Z",
+      "payload": {}
+    }
+  ],
   "retryJobs": [],
   "ownerNotifications": [],
-  "pilotModes": [
-    {
-      "businessId": "biz_1",
-      "mode": "assisted",
-      "maxAutoExecutions": 3,
-      "autoExecutedCount": 0,
-      "updatedAt": "2026-04-05T17:57:48.998Z"
-    }
-  ],
+  "pilotModes": [],
   "aiCommands": [],
   "alerts": [],
   "credentialRotations": []
