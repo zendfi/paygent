@@ -120,6 +120,9 @@ export async function createTopupPaymentLink(input: {
     method: "POST",
     body: {
       amount: input.amount,
+      currency: "USD",
+      token: "USDC",
+      payer_service_charge: true,
       description: `Paygent top-up for ${input.businessId}`,
       onramp: true,
       split_recipients: [
