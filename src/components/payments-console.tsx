@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Business = {
   id: string;
@@ -220,6 +220,22 @@ export function PaymentsConsole() {
     setResponseLog(JSON.stringify(payload, null, 2));
   }, []);
 
+  const requireBusinessSelection = useCallback(() => {
+    if (!selectedBusinessId) {
+      setLastErrorMessage("Choose a business first before running this action.");
+      return false;
+    }
+    return true;
+  }, [selectedBusinessId]);
+
+  const requireIntentSelection = useCallback(() => {
+    if (!selectedIntentId) {
+      setLastErrorMessage("Choose a payment from the approval list first.");
+      return false;
+    }
+    return true;
+  }, [selectedIntentId]);
+
   const refreshBusinesses = useCallback(async () => {
     const response = await fetch("/api/businesses", { cache: "no-store" });
     const data = (await response.json()) as { businesses: Business[] };
@@ -232,8 +248,16 @@ export function PaymentsConsole() {
     return data;
   }, [selectedBusinessId]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void refreshBusinesses();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [refreshBusinesses]);
+
   const refreshBusinessDetail = useCallback(async () => {
-    if (!selectedBusinessId) {
+    if (!requireBusinessSelection()) {
       return;
     }
 
@@ -250,10 +274,10 @@ export function PaymentsConsole() {
     if (!selectedIntentId) {
       setSelectedIntentId("");
     }
-  }, [payoutSupplierId, selectedBusinessId, selectedIntentId]);
+  }, [payoutSupplierId, requireBusinessSelection, selectedBusinessId, selectedIntentId]);
 
   const refreshActivity = useCallback(async () => {
-    if (!selectedBusinessId) {
+    if (!requireBusinessSelection()) {
       return;
     }
 
@@ -269,7 +293,20 @@ export function PaymentsConsole() {
         setSelectedIntentId(firstPending.id);
       }
     }
-  }, [selectedBusinessId, selectedIntentId]);
+  }, [requireBusinessSelection, selectedBusinessId, selectedIntentId]);
+
+  useEffect(() => {
+    if (!selectedBusinessId) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void refreshBusinessDetail();
+      void refreshActivity();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [refreshActivity, refreshBusinessDetail, selectedBusinessId]);
 
   const createBusiness = useCallback(async () => {
     const response = await fetch("/api/businesses", {
@@ -290,7 +327,7 @@ export function PaymentsConsole() {
   }, [newBusinessName, newBusinessPhone, newBusinessType, refreshBusinesses, writeLog]);
 
   const initSubaccount = useCallback(async () => {
-    if (!selectedBusinessId) {
+    if (!requireBusinessSelection()) {
       return;
     }
 
@@ -300,10 +337,10 @@ export function PaymentsConsole() {
     const data = await response.json();
     writeLog(data);
     await refreshBusinessDetail();
-  }, [refreshBusinessDetail, selectedBusinessId, writeLog]);
+  }, [refreshBusinessDetail, requireBusinessSelection, selectedBusinessId, writeLog]);
 
   const addSupplier = useCallback(async () => {
-    if (!selectedBusinessId) {
+    if (!requireBusinessSelection()) {
       return;
     }
 
@@ -330,11 +367,12 @@ export function PaymentsConsole() {
     supplierAccountNumber,
     supplierBankId,
     supplierName,
+    requireBusinessSelection,
     writeLog,
   ]);
 
   const createTopupLink = useCallback(async () => {
-    if (!selectedBusinessId) {
+    if (!requireBusinessSelection()) {
       return;
     }
 
@@ -349,10 +387,10 @@ export function PaymentsConsole() {
 
     const data = await response.json();
     writeLog(data);
-  }, [selectedBusinessId, topupAmount, writeLog]);
+  }, [requireBusinessSelection, selectedBusinessId, topupAmount, writeLog]);
 
   const freezeBusiness = useCallback(async () => {
-    if (!selectedBusinessId) {
+    if (!requireBusinessSelection()) {
       return;
     }
 
@@ -368,10 +406,10 @@ export function PaymentsConsole() {
     writeLog(data);
     await refreshBusinesses();
     await refreshBusinessDetail();
-  }, [refreshBusinessDetail, refreshBusinesses, selectedBusinessId, writeLog]);
+  }, [refreshBusinessDetail, refreshBusinesses, requireBusinessSelection, selectedBusinessId, writeLog]);
 
   const unfreezeBusiness = useCallback(async () => {
-    if (!selectedBusinessId) {
+    if (!requireBusinessSelection()) {
       return;
     }
 
@@ -387,10 +425,10 @@ export function PaymentsConsole() {
     writeLog(data);
     await refreshBusinesses();
     await refreshBusinessDetail();
-  }, [refreshBusinessDetail, refreshBusinesses, selectedBusinessId, writeLog]);
+  }, [refreshBusinessDetail, refreshBusinesses, requireBusinessSelection, selectedBusinessId, writeLog]);
 
   const activatePolicy = useCallback(async () => {
-    if (!selectedBusinessId) {
+    if (!requireBusinessSelection()) {
       return;
     }
 
@@ -425,12 +463,18 @@ export function PaymentsConsole() {
     policyMaxPerTx,
     policyStartTime,
     refreshBusinessDetail,
+    requireBusinessSelection,
     selectedBusinessId,
     writeLog,
   ]);
 
   const evaluatePayoutIntent = useCallback(async () => {
-    if (!selectedBusinessId || !payoutSupplierId) {
+    if (!requireBusinessSelection()) {
+      return;
+    }
+
+    if (!payoutSupplierId) {
+      setLastErrorMessage("Choose a supplier first before checking a payment.");
       return;
     }
 
@@ -459,12 +503,13 @@ export function PaymentsConsole() {
     payoutSupplierId,
     refreshBusinessDetail,
     refreshActivity,
+    requireBusinessSelection,
     selectedBusinessId,
     writeLog,
   ]);
 
   const approveIntent = useCallback(async () => {
-    if (!selectedIntentId) {
+    if (!requireIntentSelection()) {
       return;
     }
 
@@ -476,10 +521,10 @@ export function PaymentsConsole() {
     writeLog(data);
     await refreshBusinessDetail();
     await refreshActivity();
-  }, [refreshActivity, refreshBusinessDetail, selectedIntentId, writeLog]);
+  }, [refreshActivity, refreshBusinessDetail, requireIntentSelection, selectedIntentId, writeLog]);
 
   const rejectIntent = useCallback(async () => {
-    if (!selectedIntentId) {
+    if (!requireIntentSelection()) {
       return;
     }
 
@@ -491,7 +536,7 @@ export function PaymentsConsole() {
     writeLog(data);
     await refreshBusinessDetail();
     await refreshActivity();
-  }, [refreshActivity, refreshBusinessDetail, selectedIntentId, writeLog]);
+  }, [refreshActivity, refreshBusinessDetail, requireIntentSelection, selectedIntentId, writeLog]);
 
   const runReconciliation = useCallback(async () => {
     const response = await fetch("/api/reconciliation/run", {
@@ -522,7 +567,12 @@ export function PaymentsConsole() {
   }, [refreshActivity, writeLog]);
 
   const runAiParse = useCallback(async () => {
-    if (!selectedBusinessId || !ownerCommand.trim()) {
+    if (!requireBusinessSelection()) {
+      return;
+    }
+
+    if (!ownerCommand.trim()) {
+      setLastErrorMessage("Type a payment command first.");
       return;
     }
 
@@ -542,10 +592,10 @@ export function PaymentsConsole() {
     writeLog(data);
     await refreshBusinessDetail();
     await refreshActivity();
-  }, [ownerCommand, refreshActivity, refreshBusinessDetail, selectedBusinessId, submitParsedCommand, writeLog]);
+  }, [ownerCommand, refreshActivity, refreshBusinessDetail, requireBusinessSelection, selectedBusinessId, submitParsedCommand, writeLog]);
 
   const updatePilotMode = useCallback(async () => {
-    if (!selectedBusinessId) {
+    if (!requireBusinessSelection()) {
       return;
     }
 
@@ -563,7 +613,7 @@ export function PaymentsConsole() {
     const data = await response.json();
     writeLog(data);
     await refreshBusinessDetail();
-  }, [pilotAutoLimit, pilotMode, refreshBusinessDetail, selectedBusinessId, writeLog]);
+  }, [pilotAutoLimit, pilotMode, refreshBusinessDetail, requireBusinessSelection, selectedBusinessId, writeLog]);
 
   const runLoadCheck = useCallback(async () => {
     const response = await fetch("/api/admin/load-check", {
