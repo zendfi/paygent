@@ -115,7 +115,14 @@ export async function createTopupPaymentLink(input: {
     };
   }
 
-  return zendfiRequest<{ id: string; url?: string }>({
+  const response = await zendfiRequest<{
+    id: string;
+    url?: string;
+    hosted_page_url?: string;
+    payment_url?: string;
+    checkout_url?: string;
+    link_code?: string;
+  }>({
     path: "/payment-links",
     method: "POST",
     body: {
@@ -133,6 +140,18 @@ export async function createTopupPaymentLink(input: {
       ],
     },
   });
+
+  const normalizedUrl =
+    response.url ??
+    response.hosted_page_url ??
+    response.payment_url ??
+    response.checkout_url ??
+    (response.link_code ? `https://checkout.zendfi.tech/checkout/${response.link_code}` : undefined);
+
+  return {
+    id: response.id,
+    url: normalizedUrl,
+  };
 }
 
 export async function freezeSubaccount(subaccountId: string, reason: string): Promise<{
