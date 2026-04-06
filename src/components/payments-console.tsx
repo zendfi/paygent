@@ -146,6 +146,8 @@ export function PaymentsConsole() {
   const [supplierAccountName, setSupplierAccountName] = useState("Musa Farms");
 
   const [topupAmount, setTopupAmount] = useState("50000");
+  const [latestTopupUrl, setLatestTopupUrl] = useState("");
+  const [latestTopupLinkId, setLatestTopupLinkId] = useState("");
   const [policyMaxPerTx, setPolicyMaxPerTx] = useState("30000");
   const [policyDailyCap, setPolicyDailyCap] = useState("100000");
   const [policyApprovalThreshold, setPolicyApprovalThreshold] = useState("30000");
@@ -392,6 +394,15 @@ export function PaymentsConsole() {
     }
 
     const amount = Number(topupAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setLatestTopupUrl("");
+      setLatestTopupLinkId("");
+      setLastErrorMessage("Enter a valid amount greater than zero for add funds.");
+      return;
+    }
+
+    setLatestTopupUrl("");
+    setLatestTopupLinkId("");
     const response = await fetch(`/api/businesses/${selectedBusinessId}/topup-links`, {
       method: "POST",
       headers: {
@@ -400,8 +411,28 @@ export function PaymentsConsole() {
       body: JSON.stringify({ amount }),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as {
+      success?: boolean;
+      paymentLinkId?: string;
+      url?: string;
+      message?: string;
+      error?: string;
+    };
     writeLog(data);
+
+    if (!response.ok) {
+      setLatestTopupUrl("");
+      setLatestTopupLinkId("");
+      return;
+    }
+
+    if (typeof data.url === "string" && data.url.length > 0) {
+      setLatestTopupUrl(data.url);
+      setLatestTopupLinkId(typeof data.paymentLinkId === "string" ? data.paymentLinkId : "");
+      setLastErrorMessage("");
+    } else {
+      setLastErrorMessage("Top-up link was created but no URL was returned. Check technical log.");
+    }
   }, [requireBusinessSelection, selectedBusinessId, topupAmount, writeLog]);
 
   const freezeBusiness = useCallback(async () => {
@@ -928,6 +959,20 @@ export function PaymentsConsole() {
             {isActionActive("add_funds_link") ? "Processing..." : "Add funds link"}
           </button>
         </div>
+        {latestTopupUrl ? (
+          <div className="rounded-md border border-indigo-400/40 bg-indigo-400/10 px-3 py-2 text-xs text-indigo-100">
+            <p className="font-semibold">Funds link ready</p>
+            {latestTopupLinkId ? <p className="mt-1">Link ID: {latestTopupLinkId}</p> : null}
+            <a
+              href={latestTopupUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block break-all underline"
+            >
+              {latestTopupUrl}
+            </a>
+          </div>
+        ) : null}
         <button
           type="button"
           disabled={Boolean(activeAction)}
