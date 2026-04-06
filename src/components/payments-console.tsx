@@ -130,6 +130,7 @@ export function PaymentsConsole() {
     useState<BusinessDetailResponse | null>(null);
   const [responseLog, setResponseLog] = useState<string>("No actions yet.");
   const [lastErrorMessage, setLastErrorMessage] = useState<string>("");
+  const [activeAction, setActiveAction] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"onboarding" | "payouts" | "operations" | "logs">(
     "onboarding",
   );
@@ -235,6 +236,20 @@ export function PaymentsConsole() {
     }
     return true;
   }, [selectedIntentId]);
+
+  const runAction = useCallback(async (actionKey: string, fn: () => Promise<void>) => {
+    setActiveAction(actionKey);
+    try {
+      await fn();
+    } finally {
+      setActiveAction((current) => (current === actionKey ? null : current));
+    }
+  }, []);
+
+  const isActionActive = useCallback(
+    (actionKey: string) => activeAction === actionKey,
+    [activeAction],
+  );
 
   const refreshBusinesses = useCallback(async () => {
     const response = await fetch("/api/businesses", { cache: "no-store" });
@@ -741,14 +756,17 @@ export function PaymentsConsole() {
         <button
           type="button"
           className="rounded-lg border border-emerald-400/50 bg-emerald-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-300"
-          onClick={async () => {
-            const data = await refreshBusinesses();
-            writeLog(data);
-            await refreshBusinessDetail();
-            await refreshActivity();
-          }}
+          disabled={Boolean(activeAction)}
+          onClick={() =>
+            void runAction("refresh_data", async () => {
+              const data = await refreshBusinesses();
+              writeLog(data);
+              await refreshBusinessDetail();
+              await refreshActivity();
+            })
+          }
         >
-          Refresh Data
+          {isActionActive("refresh_data") ? "Processing..." : "Refresh Data"}
         </button>
       </div>
 
@@ -843,10 +861,11 @@ export function PaymentsConsole() {
             />
             <button
               type="button"
-              onClick={createBusiness}
+              disabled={Boolean(activeAction)}
+              onClick={() => void runAction("add_business", createBusiness)}
               className="rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950"
             >
-              Add business
+              {isActionActive("add_business") ? "Processing..." : "Add business"}
             </button>
           </div>
         </div>
@@ -870,10 +889,11 @@ export function PaymentsConsole() {
           </select>
           <button
             type="button"
-            onClick={refreshBusinessDetail}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("view_business_details", refreshBusinessDetail)}
             className="mt-3 rounded-md border border-slate-600 px-3 py-2 text-sm"
           >
-            View business details
+            {isActionActive("view_business_details") ? "Processing..." : "View business details"}
           </button>
           {selectedBusiness ? (
             <p className="mt-3 text-xs text-slate-300">
@@ -886,10 +906,11 @@ export function PaymentsConsole() {
       <div className="mt-4 grid gap-4 lg:grid-cols-4">
         <button
           type="button"
-          onClick={initSubaccount}
+          disabled={Boolean(activeAction)}
+          onClick={() => void runAction("setup_wallet", initSubaccount)}
           className="rounded-md border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-200"
         >
-          Set up wallet
+          {isActionActive("setup_wallet") ? "Processing..." : "Set up wallet"}
         </button>
         <div className="flex gap-2">
           <input
@@ -900,25 +921,28 @@ export function PaymentsConsole() {
           />
           <button
             type="button"
-            onClick={createTopupLink}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("add_funds_link", createTopupLink)}
             className="rounded-md border border-indigo-400/40 bg-indigo-400/10 px-3 py-2 text-sm font-semibold text-indigo-200"
           >
-            Add funds link
+            {isActionActive("add_funds_link") ? "Processing..." : "Add funds link"}
           </button>
         </div>
         <button
           type="button"
-          onClick={freezeBusiness}
+          disabled={Boolean(activeAction)}
+          onClick={() => void runAction("pause_payouts", freezeBusiness)}
           className="rounded-md border border-rose-400/40 bg-rose-400/10 px-3 py-2 text-sm font-semibold text-rose-200"
         >
-          Pause payouts
+          {isActionActive("pause_payouts") ? "Processing..." : "Pause payouts"}
         </button>
         <button
           type="button"
-          onClick={unfreezeBusiness}
+          disabled={Boolean(activeAction)}
+          onClick={() => void runAction("resume_payouts", unfreezeBusiness)}
           className="rounded-md border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-sm font-semibold text-emerald-200"
         >
-          Resume payouts
+          {isActionActive("resume_payouts") ? "Processing..." : "Resume payouts"}
         </button>
       </div>
 
@@ -952,10 +976,11 @@ export function PaymentsConsole() {
         </div>
         <button
           type="button"
-          onClick={addSupplier}
+          disabled={Boolean(activeAction)}
+          onClick={() => void runAction("add_supplier", addSupplier)}
           className="mt-3 rounded-md bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900"
         >
-          Add supplier
+          {isActionActive("add_supplier") ? "Processing..." : "Add supplier"}
         </button>
       </div>
 
@@ -1003,10 +1028,11 @@ export function PaymentsConsole() {
         </div>
         <button
           type="button"
-          onClick={activatePolicy}
+          disabled={Boolean(activeAction)}
+          onClick={() => void runAction("save_rules", activatePolicy)}
           className="mt-3 rounded-md bg-cyan-300 px-3 py-2 text-sm font-semibold text-slate-900"
         >
-          Save rules
+          {isActionActive("save_rules") ? "Processing..." : "Save rules"}
         </button>
       </div>
         </>
@@ -1017,17 +1043,19 @@ export function PaymentsConsole() {
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <button
           type="button"
-          onClick={runReconciliation}
+          disabled={Boolean(activeAction)}
+          onClick={() => void runAction("recheck_status", runReconciliation)}
           className="rounded-md border border-amber-300/50 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-200"
         >
-          Recheck payment status
+          {isActionActive("recheck_status") ? "Processing..." : "Recheck payment status"}
         </button>
         <button
           type="button"
-          onClick={runRetries}
+          disabled={Boolean(activeAction)}
+          onClick={() => void runAction("retry_failed", runRetries)}
           className="rounded-md border border-sky-300/50 bg-sky-400/10 px-3 py-2 text-sm font-semibold text-sky-200"
         >
-          Retry failed payments
+          {isActionActive("retry_failed") ? "Processing..." : "Retry failed payments"}
         </button>
       </div>
 
@@ -1036,80 +1064,91 @@ export function PaymentsConsole() {
         <div className="mt-3 grid gap-2 sm:grid-cols-4">
           <button
             type="button"
-            onClick={runLoadCheck}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("check_load", runLoadCheck)}
             className="rounded-md border border-emerald-300/50 bg-emerald-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200"
           >
-            Check load
+            {isActionActive("check_load") ? "Processing..." : "Check load"}
           </button>
           <button
             type="button"
-            onClick={fetchMetrics}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("view_metrics", fetchMetrics)}
             className="rounded-md border border-sky-300/50 bg-sky-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-sky-200"
           >
-            View metrics
+            {isActionActive("view_metrics") ? "Processing..." : "View metrics"}
           </button>
           <button
             type="button"
-            onClick={fetchSla}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("view_uptime", fetchSla)}
             className="rounded-md border border-indigo-300/50 bg-indigo-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-indigo-200"
           >
-            View uptime
+            {isActionActive("view_uptime") ? "Processing..." : "View uptime"}
           </button>
           <button
             type="button"
-            onClick={expandPilot}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("expand_pilot", expandPilot)}
             className="rounded-md border border-amber-300/50 bg-amber-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-200"
           >
-            Expand Pilot to 3
+            {isActionActive("expand_pilot") ? "Processing..." : "Expand Pilot to 3"}
           </button>
           <button
             type="button"
-            onClick={evaluateAlerts}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("evaluate_alerts", evaluateAlerts)}
             className="rounded-md border border-rose-300/50 bg-rose-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-rose-200"
           >
-            Evaluate Alerts
+            {isActionActive("evaluate_alerts") ? "Processing..." : "Evaluate Alerts"}
           </button>
           <button
             type="button"
-            onClick={fetchAlerts}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("view_alerts", fetchAlerts)}
             className="rounded-md border border-fuchsia-300/50 bg-fuchsia-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-fuchsia-200"
           >
-            View alerts
+            {isActionActive("view_alerts") ? "Processing..." : "View alerts"}
           </button>
           <button
             type="button"
-            onClick={listRotations}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("list_rotations", listRotations)}
             className="rounded-md border border-teal-300/50 bg-teal-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-teal-200"
           >
-            List Rotations
+            {isActionActive("list_rotations") ? "Processing..." : "List Rotations"}
           </button>
           <button
             type="button"
-            onClick={fetchRunbooks}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("view_runbooks", fetchRunbooks)}
             className="rounded-md border border-slate-300/50 bg-slate-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-200"
           >
-            View runbooks
+            {isActionActive("view_runbooks") ? "Processing..." : "View runbooks"}
           </button>
           <button
             type="button"
-            onClick={fetchPilotChecklist}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("pilot_checklist", fetchPilotChecklist)}
             className="rounded-md border border-lime-300/50 bg-lime-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-lime-200"
           >
-            Pilot Checklist
+            {isActionActive("pilot_checklist") ? "Processing..." : "Pilot Checklist"}
           </button>
           <button
             type="button"
-            onClick={fetchKpiReport}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("business_report", fetchKpiReport)}
             className="rounded-md border border-orange-300/50 bg-orange-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-orange-200"
           >
-            Business report
+            {isActionActive("business_report") ? "Processing..." : "Business report"}
           </button>
           <button
             type="button"
-            onClick={fetchLaunchRecommendation}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("go_live_recommendation", fetchLaunchRecommendation)}
             className="rounded-md border border-emerald-300/50 bg-emerald-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200"
           >
-            Go-live recommendation
+            {isActionActive("go_live_recommendation") ? "Processing..." : "Go-live recommendation"}
           </button>
         </div>
 
@@ -1126,10 +1165,11 @@ export function PaymentsConsole() {
           </select>
           <button
             type="button"
-            onClick={runIncidentSimulation}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("simulate_issue", runIncidentSimulation)}
             className="rounded-md bg-amber-300 px-3 py-2 text-xs font-semibold text-slate-900"
           >
-            Simulate issue
+            {isActionActive("simulate_issue") ? "Processing..." : "Simulate issue"}
           </button>
           <div className="hidden sm:block" />
           <div className="hidden sm:block" />
@@ -1163,10 +1203,11 @@ export function PaymentsConsole() {
           />
           <button
             type="button"
-            onClick={requestRotation}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("request_rotation", requestRotation)}
             className="rounded-md bg-cyan-300 px-3 py-2 text-xs font-semibold text-slate-900"
           >
-            Request key rotation
+            {isActionActive("request_rotation") ? "Processing..." : "Request key rotation"}
           </button>
           <input
             value={rotationIdToComplete}
@@ -1182,10 +1223,11 @@ export function PaymentsConsole() {
           />
           <button
             type="button"
-            onClick={completeRotation}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("complete_rotation", completeRotation)}
             className="rounded-md bg-emerald-300 px-3 py-2 text-xs font-semibold text-slate-900"
           >
-            Mark rotation complete
+            {isActionActive("complete_rotation") ? "Processing..." : "Mark rotation complete"}
           </button>
         </div>
       </div>
@@ -1212,10 +1254,11 @@ export function PaymentsConsole() {
         </label>
         <button
           type="button"
-          onClick={runAiParse}
+          disabled={Boolean(activeAction)}
+          onClick={() => void runAction("process_command", runAiParse)}
           className="mt-3 rounded-md bg-violet-300 px-3 py-2 text-sm font-semibold text-slate-900"
         >
-          Process command
+          {isActionActive("process_command") ? "Processing..." : "Process command"}
         </button>
       </div>
 
@@ -1238,10 +1281,11 @@ export function PaymentsConsole() {
           />
           <button
             type="button"
-            onClick={updatePilotMode}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("save_pilot_mode", updatePilotMode)}
             className="rounded-md bg-teal-300 px-3 py-2 text-sm font-semibold text-slate-900"
           >
-            Save pilot mode
+            {isActionActive("save_pilot_mode") ? "Processing..." : "Save pilot mode"}
           </button>
         </div>
       </div>
@@ -1263,17 +1307,19 @@ export function PaymentsConsole() {
           </select>
           <button
             type="button"
-            onClick={approveIntent}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("approve_payment", approveIntent)}
             className="rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-900"
           >
-            Approve and send
+            {isActionActive("approve_payment") ? "Processing..." : "Approve and send"}
           </button>
           <button
             type="button"
-            onClick={rejectIntent}
+            disabled={Boolean(activeAction)}
+            onClick={() => void runAction("reject_payment", rejectIntent)}
             className="rounded-md bg-rose-400 px-3 py-2 text-sm font-semibold text-slate-900"
           >
-            Reject
+            {isActionActive("reject_payment") ? "Processing..." : "Reject"}
           </button>
         </div>
       </div>
@@ -1308,10 +1354,11 @@ export function PaymentsConsole() {
         </div>
         <button
           type="button"
-          onClick={evaluatePayoutIntent}
+          disabled={Boolean(activeAction)}
+          onClick={() => void runAction("check_payment", evaluatePayoutIntent)}
           className="mt-3 rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-900"
         >
-          Check payment
+          {isActionActive("check_payment") ? "Processing..." : "Check payment"}
         </button>
       </div>
         </>
