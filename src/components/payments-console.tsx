@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Business = {
   id: string;
@@ -130,8 +131,6 @@ export function PaymentsConsole() {
     useState<BusinessDetailResponse | null>(null);
   const [responseLog, setResponseLog] = useState<string>("No actions yet.");
   const [lastErrorMessage, setLastErrorMessage] = useState<string>("");
-  const [authEmail, setAuthEmail] = useState<string>("");
-  const [authPassword, setAuthPassword] = useState<string>("");
   const [authSessionEmail, setAuthSessionEmail] = useState<string>("");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"onboarding" | "payouts" | "operations" | "logs">(
@@ -185,6 +184,28 @@ export function PaymentsConsole() {
     [activity],
   );
 
+  const quickStats = useMemo(
+    () => [
+      {
+        label: "Suppliers",
+        value: String(selectedBusinessDetail?.suppliers.length ?? 0),
+      },
+      {
+        label: "Pending approvals",
+        value: String(approvalIntents.length),
+      },
+      {
+        label: "Active retries",
+        value: String((activity?.retryJobs ?? []).filter((job) => job.status === "pending").length),
+      },
+      {
+        label: "Available USDC",
+        value: String(selectedBusinessDetail?.subaccountBalance?.availableUsdc ?? 0),
+      },
+    ],
+    [activity, approvalIntents.length, selectedBusinessDetail],
+  );
+
   const writeLog = useCallback((payload: unknown) => {
     if (
       payload &&
@@ -213,53 +234,6 @@ export function PaymentsConsole() {
     return data;
   }, []);
 
-  const registerOwner = useCallback(async () => {
-    if (!authEmail.trim() || !authPassword.trim()) {
-      writeLog({ error: "invalid_request", message: "Email and password are required." });
-      return;
-    }
-
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: authEmail.trim().toLowerCase(),
-        password: authPassword,
-      }),
-    });
-
-    const data = await response.json();
-    writeLog(data);
-  }, [authEmail, authPassword, writeLog]);
-
-  const loginOwner = useCallback(async () => {
-    if (!authEmail.trim() || !authPassword.trim()) {
-      writeLog({ error: "invalid_request", message: "Email and password are required." });
-      return;
-    }
-
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: authEmail.trim().toLowerCase(),
-        password: authPassword,
-      }),
-    });
-
-    const data = await response.json();
-    writeLog(data);
-    if (response.ok) {
-      setIsAuthenticated(true);
-      setAuthSessionEmail(data?.session?.email ?? authEmail.trim().toLowerCase());
-      setAuthPassword("");
-    }
-  }, [authEmail, authPassword, writeLog]);
-
   const logoutOwner = useCallback(async () => {
     const response = await fetch("/api/auth/logout", {
       method: "POST",
@@ -269,6 +243,14 @@ export function PaymentsConsole() {
     setIsAuthenticated(false);
     setAuthSessionEmail("");
   }, [writeLog]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void refreshAuthState();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [refreshAuthState]);
 
   const refreshBusinesses = useCallback(async () => {
     const response = await fetch("/api/businesses", { cache: "no-store" });
@@ -752,56 +734,46 @@ export function PaymentsConsole() {
         </button>
       </div>
 
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {quickStats.map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-3"
+          >
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{stat.label}</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-100">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">Owner Authentication</p>
+        <p className="text-sm font-semibold text-slate-200">Access</p>
         <p className="mt-1 text-xs text-slate-400">
-          Create an owner account and sign in with email/password to unlock protected actions.
+          Sign in from the dedicated auth page. This area only shows your current session.
         </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-4">
-          <input
-            type="email"
-            value={authEmail}
-            onChange={(event) => setAuthEmail(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="owner@company.com"
-          />
-          <input
-            type="password"
-            value={authPassword}
-            onChange={(event) => setAuthPassword(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Minimum 8 characters"
-          />
-          <button
-            type="button"
-            onClick={registerOwner}
-            className="rounded-md border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-200"
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <Link
+            href="/auth"
+            className="rounded-md bg-emerald-400 px-3 py-2 text-center text-sm font-semibold text-slate-900"
           >
-            Sign Up
-          </button>
-          <button
-            type="button"
-            onClick={loginOwner}
-            className="rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-900"
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            onClick={logoutOwner}
-            className="rounded-md border border-slate-600 px-3 py-2 text-sm sm:col-span-2"
-          >
-            Logout
-          </button>
+            Open Sign In / Sign Up
+          </Link>
           <button
             type="button"
             onClick={async () => {
               const data = await refreshAuthState();
               writeLog(data);
             }}
-            className="rounded-md border border-slate-600 px-3 py-2 text-sm sm:col-span-2"
+            className="rounded-md border border-slate-600 px-3 py-2 text-sm"
           >
             Check Session
+          </button>
+          <button
+            type="button"
+            onClick={logoutOwner}
+            className="rounded-md border border-slate-600 px-3 py-2 text-sm"
+          >
+            Logout
           </button>
         </div>
         <p className="mt-2 text-xs text-slate-300">
@@ -819,7 +791,7 @@ export function PaymentsConsole() {
               : "border border-slate-600 text-slate-200"
           }`}
         >
-          Onboarding
+          Setup
         </button>
         <button
           type="button"
@@ -830,7 +802,7 @@ export function PaymentsConsole() {
               : "border border-slate-600 text-slate-200"
           }`}
         >
-          Payouts
+          Payments
         </button>
         <button
           type="button"
@@ -841,7 +813,7 @@ export function PaymentsConsole() {
               : "border border-slate-600 text-slate-200"
           }`}
         >
-          Operations
+          Controls
         </button>
         <button
           type="button"
@@ -852,7 +824,7 @@ export function PaymentsConsole() {
               : "border border-slate-600 text-slate-200"
           }`}
         >
-          Logs
+          Activity
         </button>
       </div>
 
@@ -866,7 +838,7 @@ export function PaymentsConsole() {
         <>
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
-          <p className="text-sm font-semibold text-slate-200">Create Business</p>
+          <p className="text-sm font-semibold text-slate-200">Add business</p>
           <div className="mt-3 grid gap-2">
             <input
               value={newBusinessName}
@@ -891,13 +863,13 @@ export function PaymentsConsole() {
               onClick={createBusiness}
               className="rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950"
             >
-              Create Business
+              Add business
             </button>
           </div>
         </div>
 
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
-          <p className="text-sm font-semibold text-slate-200">Select Business</p>
+          <p className="text-sm font-semibold text-slate-200">Choose business</p>
           <select
             className="mt-3 w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
             value={selectedBusinessId}
@@ -918,7 +890,7 @@ export function PaymentsConsole() {
             onClick={refreshBusinessDetail}
             className="mt-3 rounded-md border border-slate-600 px-3 py-2 text-sm"
           >
-            Load Business Detail
+            View business details
           </button>
           {selectedBusiness ? (
             <p className="mt-3 text-xs text-slate-300">
@@ -934,21 +906,21 @@ export function PaymentsConsole() {
           onClick={initSubaccount}
           className="rounded-md border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-200"
         >
-          Init Subaccount
+          Set up wallet
         </button>
         <div className="flex gap-2">
           <input
             value={topupAmount}
             onChange={(event) => setTopupAmount(event.target.value)}
             className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Topup amount"
+            placeholder="Add funds amount"
           />
           <button
             type="button"
             onClick={createTopupLink}
             className="rounded-md border border-indigo-400/40 bg-indigo-400/10 px-3 py-2 text-sm font-semibold text-indigo-200"
           >
-            Topup Link
+            Add funds link
           </button>
         </div>
         <button
@@ -956,19 +928,19 @@ export function PaymentsConsole() {
           onClick={freezeBusiness}
           className="rounded-md border border-rose-400/40 bg-rose-400/10 px-3 py-2 text-sm font-semibold text-rose-200"
         >
-          Freeze Business
+          Pause payouts
         </button>
         <button
           type="button"
           onClick={unfreezeBusiness}
           className="rounded-md border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-sm font-semibold text-emerald-200"
         >
-          Unfreeze Business
+          Resume payouts
         </button>
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">Supplier Whitelist</p>
+        <p className="text-sm font-semibold text-slate-200">Supplier list</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <input
             value={supplierName}
@@ -980,7 +952,7 @@ export function PaymentsConsole() {
             value={supplierBankId}
             onChange={(event) => setSupplierBankId(event.target.value)}
             className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Bank id"
+            placeholder="Bank"
           />
           <input
             value={supplierAccountNumber}
@@ -1000,49 +972,49 @@ export function PaymentsConsole() {
           onClick={addSupplier}
           className="mt-3 rounded-md bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-900"
         >
-          Add Supplier
+          Add supplier
         </button>
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">Policy Activation</p>
+        <p className="text-sm font-semibold text-slate-200">Spending rules</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <input
             value={policyMaxPerTx}
             onChange={(event) => setPolicyMaxPerTx(event.target.value)}
             className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Max per tx (NGN)"
+            placeholder="Max per payment (NGN)"
           />
           <input
             value={policyDailyCap}
             onChange={(event) => setPolicyDailyCap(event.target.value)}
             className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Daily cap (NGN)"
+            placeholder="Daily limit (NGN)"
           />
           <input
             value={policyApprovalThreshold}
             onChange={(event) => setPolicyApprovalThreshold(event.target.value)}
             className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Approval threshold (NGN)"
+            placeholder="Manual approval above (NGN)"
           />
           <input
             value={policyDays}
             onChange={(event) => setPolicyDays(event.target.value)}
             className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm sm:col-span-2"
-            placeholder="Active days UTC (e.g. 1,2,3,4,5,6)"
+            placeholder="Active days (UTC, e.g. 1,2,3,4,5,6)"
           />
           <div className="flex gap-2">
             <input
               value={policyStartTime}
               onChange={(event) => setPolicyStartTime(event.target.value)}
               className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-              placeholder="Start (HH:mm)"
+              placeholder="Start time (UTC)"
             />
             <input
               value={policyEndTime}
               onChange={(event) => setPolicyEndTime(event.target.value)}
               className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-              placeholder="End (HH:mm)"
+              placeholder="End time (UTC)"
             />
           </div>
         </div>
@@ -1051,7 +1023,7 @@ export function PaymentsConsole() {
           onClick={activatePolicy}
           className="mt-3 rounded-md bg-cyan-300 px-3 py-2 text-sm font-semibold text-slate-900"
         >
-          Activate Policy
+          Save rules
         </button>
       </div>
         </>
@@ -1065,40 +1037,40 @@ export function PaymentsConsole() {
           onClick={runReconciliation}
           className="rounded-md border border-amber-300/50 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-200"
         >
-          Run Reconciliation Sweep
+          Recheck payment status
         </button>
         <button
           type="button"
           onClick={runRetries}
           className="rounded-md border border-sky-300/50 bg-sky-400/10 px-3 py-2 text-sm font-semibold text-sky-200"
         >
-          Run Due Retry Jobs
+          Retry failed payments
         </button>
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">Operational Controls</p>
+        <p className="text-sm font-semibold text-slate-200">System tools</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-4">
           <button
             type="button"
             onClick={runLoadCheck}
             className="rounded-md border border-emerald-300/50 bg-emerald-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200"
           >
-            Run Load Check
+            Check load
           </button>
           <button
             type="button"
             onClick={fetchMetrics}
             className="rounded-md border border-sky-300/50 bg-sky-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-sky-200"
           >
-            Fetch Metrics
+            View metrics
           </button>
           <button
             type="button"
             onClick={fetchSla}
             className="rounded-md border border-indigo-300/50 bg-indigo-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-indigo-200"
           >
-            Fetch SLA
+            View uptime
           </button>
           <button
             type="button"
@@ -1119,7 +1091,7 @@ export function PaymentsConsole() {
             onClick={fetchAlerts}
             className="rounded-md border border-fuchsia-300/50 bg-fuchsia-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-fuchsia-200"
           >
-            List Alerts
+            View alerts
           </button>
           <button
             type="button"
@@ -1133,7 +1105,7 @@ export function PaymentsConsole() {
             onClick={fetchRunbooks}
             className="rounded-md border border-slate-300/50 bg-slate-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-200"
           >
-            Fetch Runbooks
+            View runbooks
           </button>
           <button
             type="button"
@@ -1147,14 +1119,14 @@ export function PaymentsConsole() {
             onClick={fetchKpiReport}
             className="rounded-md border border-orange-300/50 bg-orange-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-orange-200"
           >
-            KPI Report
+            Business report
           </button>
           <button
             type="button"
             onClick={fetchLaunchRecommendation}
             className="rounded-md border border-emerald-300/50 bg-emerald-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200"
           >
-            Launch Recommendation
+            Go-live recommendation
           </button>
         </div>
 
@@ -1174,7 +1146,7 @@ export function PaymentsConsole() {
             onClick={runIncidentSimulation}
             className="rounded-md bg-amber-300 px-3 py-2 text-xs font-semibold text-slate-900"
           >
-            Run Incident Simulation
+            Simulate issue
           </button>
           <div className="hidden sm:block" />
           <div className="hidden sm:block" />
@@ -1204,20 +1176,20 @@ export function PaymentsConsole() {
             value={rotationReason}
             onChange={(event) => setRotationReason(event.target.value)}
             className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-xs"
-            placeholder="Rotation reason"
+            placeholder="Why rotate"
           />
           <button
             type="button"
             onClick={requestRotation}
             className="rounded-md bg-cyan-300 px-3 py-2 text-xs font-semibold text-slate-900"
           >
-            Request Rotation
+            Request key rotation
           </button>
           <input
             value={rotationIdToComplete}
             onChange={(event) => setRotationIdToComplete(event.target.value)}
             className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-xs sm:col-span-2"
-            placeholder="Rotation ID to complete"
+            placeholder="Rotation ID"
           />
           <input
             value={rotationCompletionNotes}
@@ -1230,7 +1202,7 @@ export function PaymentsConsole() {
             onClick={completeRotation}
             className="rounded-md bg-emerald-300 px-3 py-2 text-xs font-semibold text-slate-900"
           >
-            Complete Rotation
+            Mark rotation complete
           </button>
         </div>
       </div>
@@ -1240,12 +1212,12 @@ export function PaymentsConsole() {
       {activeTab === "payouts" ? (
         <>
       <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">AI Command Parser</p>
+        <p className="text-sm font-semibold text-slate-200">Plain-language payment command</p>
         <textarea
           value={ownerCommand}
           onChange={(event) => setOwnerCommand(event.target.value)}
           className="mt-3 min-h-24 w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-          placeholder="Type owner command..."
+          placeholder="Describe payment in plain language..."
         />
         <label className="mt-2 flex items-center gap-2 text-xs text-slate-300">
           <input
@@ -1253,19 +1225,19 @@ export function PaymentsConsole() {
             checked={submitParsedCommand}
             onChange={(event) => setSubmitParsedCommand(event.target.checked)}
           />
-          Submit parsed command to payout intent flow
+          Send this command to payment flow
         </label>
         <button
           type="button"
           onClick={runAiParse}
           className="mt-3 rounded-md bg-violet-300 px-3 py-2 text-sm font-semibold text-slate-900"
         >
-          Parse Owner Command
+          Process command
         </button>
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">Safe-Launch Pilot Mode</p>
+        <p className="text-sm font-semibold text-slate-200">Pilot automation mode</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <select
             value={pilotMode}
@@ -1279,27 +1251,27 @@ export function PaymentsConsole() {
             value={pilotAutoLimit}
             onChange={(event) => setPilotAutoLimit(event.target.value)}
             className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Max auto executions"
+            placeholder="Max automatic payments"
           />
           <button
             type="button"
             onClick={updatePilotMode}
             className="rounded-md bg-teal-300 px-3 py-2 text-sm font-semibold text-slate-900"
           >
-            Update Pilot Mode
+            Save pilot mode
           </button>
         </div>
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">Approval Queue</p>
+        <p className="text-sm font-semibold text-slate-200">Payments waiting approval</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <select
             value={selectedIntentId}
             onChange={(event) => setSelectedIntentId(event.target.value)}
             className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
           >
-            <option value="">Select approval intent...</option>
+            <option value="">Select payment to approve...</option>
             {approvalIntents.map((intent) => (
               <option key={intent.id} value={intent.id}>
                 {intent.id} | NGN {intent.amountNgn}
@@ -1311,7 +1283,7 @@ export function PaymentsConsole() {
             onClick={approveIntent}
             className="rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-900"
           >
-            Approve and Execute
+            Approve and send
           </button>
           <button
             type="button"
@@ -1324,7 +1296,7 @@ export function PaymentsConsole() {
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">Evaluate Payout Intent</p>
+        <p className="text-sm font-semibold text-slate-200">New payment check</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <select
             value={payoutSupplierId}
@@ -1348,7 +1320,7 @@ export function PaymentsConsole() {
             value={payoutReason}
             onChange={(event) => setPayoutReason(event.target.value)}
             className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm"
-            placeholder="Reason"
+            placeholder="Purpose"
           />
         </div>
         <button
@@ -1356,7 +1328,7 @@ export function PaymentsConsole() {
           onClick={evaluatePayoutIntent}
           className="mt-3 rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-900"
         >
-          Evaluate Intent
+          Check payment
         </button>
       </div>
         </>
@@ -1366,7 +1338,7 @@ export function PaymentsConsole() {
         <>
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-300">
-          <p className="text-xs uppercase tracking-wider text-slate-400">Business State</p>
+          <p className="text-xs uppercase tracking-wider text-slate-400">Business snapshot</p>
           <p className="mt-2">Spent Today: NGN {selectedBusinessDetail?.spentTodayNgn ?? 0}</p>
           {selectedBusinessDetail?.activePolicy ? (
             <div className="mt-2 space-y-1">
@@ -1383,7 +1355,7 @@ export function PaymentsConsole() {
           ) : (
             <p className="mt-2 text-slate-500">No active policy set.</p>
           )}
-          <p className="mt-3 text-xs uppercase tracking-wider text-slate-400">Subaccount</p>
+          <p className="mt-3 text-xs uppercase tracking-wider text-slate-400">Wallet</p>
           {selectedBusinessDetail?.subaccount ? (
             <div className="mt-2 space-y-1">
               <p>ID: {selectedBusinessDetail.subaccount.zendfiSubaccountId}</p>
@@ -1400,11 +1372,11 @@ export function PaymentsConsole() {
               </p>
             </div>
           ) : (
-            <p className="mt-2 text-slate-500">Subaccount not initialized.</p>
+            <p className="mt-2 text-slate-500">Wallet not set up.</p>
           )}
         </div>
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400">API Response Log</p>
+          <p className="text-xs uppercase tracking-wider text-slate-400">Technical log</p>
           <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap text-xs text-slate-300">
             {responseLog}
           </pre>
@@ -1427,7 +1399,7 @@ export function PaymentsConsole() {
           </ul>
         </div>
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400">Recent Intents</p>
+          <p className="text-xs uppercase tracking-wider text-slate-400">Recent payment requests</p>
           <ul className="mt-2 space-y-2 text-xs text-slate-300">
             {(activity?.intents ?? []).slice(0, 8).map((intent) => (
               <li key={intent.id} className="rounded border border-slate-800 px-2 py-1">
@@ -1440,7 +1412,7 @@ export function PaymentsConsole() {
           </ul>
         </div>
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400">Recent Executions</p>
+          <p className="text-xs uppercase tracking-wider text-slate-400">Recent sent payments</p>
           <ul className="mt-2 space-y-2 text-xs text-slate-300">
             {(activity?.executions ?? []).slice(0, 8).map((execution) => (
               <li key={execution.id} className="rounded border border-slate-800 px-2 py-1">
@@ -1456,7 +1428,7 @@ export function PaymentsConsole() {
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400">Retry Jobs</p>
+          <p className="text-xs uppercase tracking-wider text-slate-400">Retry queue</p>
           <ul className="mt-2 space-y-2 text-xs text-slate-300">
             {(activity?.retryJobs ?? []).slice(0, 8).map((job) => (
               <li key={job.id} className="rounded border border-slate-800 px-2 py-1">
@@ -1469,7 +1441,7 @@ export function PaymentsConsole() {
           </ul>
         </div>
         <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400">Owner Notifications</p>
+          <p className="text-xs uppercase tracking-wider text-slate-400">Notifications</p>
           <ul className="mt-2 space-y-2 text-xs text-slate-300">
             {(activity?.notifications ?? []).slice(0, 8).map((notification) => (
               <li key={notification.id} className="rounded border border-slate-800 px-2 py-1">
