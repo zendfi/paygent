@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 type Business = {
   id: string;
@@ -131,8 +130,6 @@ export function PaymentsConsole() {
     useState<BusinessDetailResponse | null>(null);
   const [responseLog, setResponseLog] = useState<string>("No actions yet.");
   const [lastErrorMessage, setLastErrorMessage] = useState<string>("");
-  const [authSessionEmail, setAuthSessionEmail] = useState<string>("");
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"onboarding" | "payouts" | "operations" | "logs">(
     "onboarding",
   );
@@ -222,35 +219,6 @@ export function PaymentsConsole() {
 
     setResponseLog(JSON.stringify(payload, null, 2));
   }, []);
-
-  const refreshAuthState = useCallback(async () => {
-    const response = await fetch("/api/auth/session", { cache: "no-store" });
-    const data = (await response.json()) as {
-      authenticated?: boolean;
-      session?: { email?: string } | null;
-    };
-    setIsAuthenticated(Boolean(data.authenticated));
-    setAuthSessionEmail(data.session?.email ?? "");
-    return data;
-  }, []);
-
-  const logoutOwner = useCallback(async () => {
-    const response = await fetch("/api/auth/logout", {
-      method: "POST",
-    });
-    const data = await response.json();
-    writeLog(data);
-    setIsAuthenticated(false);
-    setAuthSessionEmail("");
-  }, [writeLog]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      void refreshAuthState();
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [refreshAuthState]);
 
   const refreshBusinesses = useCallback(async () => {
     const response = await fetch("/api/businesses", { cache: "no-store" });
@@ -744,41 +712,6 @@ export function PaymentsConsole() {
             <p className="mt-2 text-2xl font-semibold text-slate-100">{stat.value}</p>
           </div>
         ))}
-      </div>
-
-      <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">Access</p>
-        <p className="mt-1 text-xs text-slate-400">
-          Sign in from the dedicated auth page. This area only shows your current session.
-        </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <Link
-            href="/auth"
-            className="rounded-md bg-emerald-400 px-3 py-2 text-center text-sm font-semibold text-slate-900"
-          >
-            Open Sign In / Sign Up
-          </Link>
-          <button
-            type="button"
-            onClick={async () => {
-              const data = await refreshAuthState();
-              writeLog(data);
-            }}
-            className="rounded-md border border-slate-600 px-3 py-2 text-sm"
-          >
-            Check Session
-          </button>
-          <button
-            type="button"
-            onClick={logoutOwner}
-            className="rounded-md border border-slate-600 px-3 py-2 text-sm"
-          >
-            Logout
-          </button>
-        </div>
-        <p className="mt-2 text-xs text-slate-300">
-          Session status: {isAuthenticated ? `authenticated (${authSessionEmail})` : "not authenticated"}
-        </p>
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-4">

@@ -36,7 +36,22 @@ function readSessionToken(request: NextRequest): string | undefined {
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  const sessionToken = readSessionToken(request);
+  const session = sessionToken ? await verifySessionToken(sessionToken) : null;
+  const hasSession = Boolean(session);
+
   if (!pathname.startsWith("/api/")) {
+    if (pathname === "/auth") {
+      if (hasSession) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+      return NextResponse.next();
+    }
+
+    if (!hasSession) {
+      return NextResponse.redirect(new URL("/auth", request.url));
+    }
+
     return NextResponse.next();
   }
 
@@ -60,8 +75,6 @@ export async function proxy(request: NextRequest) {
   }
 
   const bearerToken = readBearerToken(request);
-  const sessionToken = readSessionToken(request);
-  const session = sessionToken ? await verifySessionToken(sessionToken) : null;
   const authorized = bearerToken === expectedToken || Boolean(session);
 
   if (!authorized) {
@@ -83,5 +96,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };

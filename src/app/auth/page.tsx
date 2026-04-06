@@ -38,6 +38,12 @@ export default function AuthPage() {
     void checkSession();
   }, [checkSession]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isAuthenticated, router]);
+
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -106,14 +112,14 @@ export default function AuthPage() {
         if (loginData.session?.email) {
           setEmail(loginData.session.email);
         }
-        router.push("/");
+        window.location.assign("/");
       } catch {
         setError("Something went wrong. Please try again.");
       } finally {
         setLoading(false);
       }
     },
-    [email, mode, password, router],
+    [email, mode, password],
   );
 
   return (
