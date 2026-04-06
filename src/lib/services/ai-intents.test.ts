@@ -106,4 +106,21 @@ describe("AI intent parsing", () => {
 
     expect(result.decision.action).toBe("execute");
   });
+
+  it("matches supplier using partial name tokens", async () => {
+    await updatePilotMode({
+      businessId: "biz_1",
+      mode: "autonomous",
+      maxAutoExecutions: 5,
+    });
+
+    const result = await parseOwnerCommandToIntent({
+      businessId: "biz_1",
+      command: "Pay Musa NGN 1500 for tomatoes",
+    });
+
+    expect(result.parsed.supplierId).toBe("sup_1");
+    expect(result.parsed.amountNgn).toBe(1500);
+    expect(result.decision.action).toBe("execute");
+  });
 });

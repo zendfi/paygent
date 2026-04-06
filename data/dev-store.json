@@ -2,69 +2,115 @@
   "businesses": [
     {
       "id": "biz_1",
-      "name": "Demo",
+      "name": "Demo Biz",
       "businessType": "retail",
       "ownerPhone": "+2348000000000",
       "status": "active",
       "pilotStage": "safe_launch",
-      "createdAt": "2026-04-05T18:30:11.680Z",
-      "updatedAt": "2026-04-05T18:30:11.680Z"
+      "createdAt": "2026-04-06T21:32:19.528Z",
+      "updatedAt": "2026-04-06T21:32:19.528Z"
     }
   ],
   "subaccounts": [],
-  "suppliers": [],
-  "policyVersions": [],
-  "dailySpendCounters": [],
+  "suppliers": [
+    {
+      "id": "sup_1",
+      "businessId": "biz_1",
+      "supplierName": "Alhaji Musa",
+      "bankId": "OPAY",
+      "accountNumber": "0123456789",
+      "accountName": "Musa Farms",
+      "enabled": true,
+      "createdAt": "2026-04-06T21:32:19.528Z",
+      "updatedAt": "2026-04-06T21:32:19.528Z"
+    }
+  ],
+  "policyVersions": [
+    {
+      "id": "pol_1",
+      "businessId": "biz_1",
+      "status": "active",
+      "maxPerTxNgn": 50000,
+      "dailyCapNgn": 200000,
+      "approvalThresholdNgn": 30000,
+      "activeDaysUtc": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "activeStartTimeUtc": "00:00",
+      "activeEndTimeUtc": "23:59",
+      "createdAt": "2026-04-06T21:32:19.528Z",
+      "activatedAt": "2026-04-06T21:32:19.528Z"
+    }
+  ],
+  "dailySpendCounters": [
+    {
+      "businessId": "biz_1",
+      "usageDate": "2026-04-06",
+      "spentNgn": 0,
+      "updatedAt": "2026-04-06T21:32:19.528Z"
+    }
+  ],
   "payoutIntents": [],
-  "payoutExecutions": [
+  "payoutExecutions": [],
+  "activityEvents": [
     {
-      "id": "exec_ok",
-      "intentId": "pi_1",
+      "id": "evt_713fa7ca9f42468c",
       "businessId": "biz_1",
-      "supplierId": "sup_1",
-      "status": "completed",
-      "createdAt": "2026-04-05T18:30:01.680Z",
-      "updatedAt": "2026-04-05T18:30:11.680Z"
+      "type": "pilot_mode_updated",
+      "message": "Pilot mode set to autonomous.",
+      "metadata": {
+        "mode": "autonomous",
+        "maxAutoExecutions": 5
+      },
+      "createdAt": "2026-04-06T21:32:19.568Z"
     },
     {
-      "id": "exec_fail",
-      "intentId": "pi_2",
+      "id": "evt_de63bb8355b54aa2",
       "businessId": "biz_1",
-      "supplierId": "sup_1",
-      "status": "failed",
-      "createdAt": "2026-04-05T18:30:01.680Z",
-      "updatedAt": "2026-04-05T18:30:11.680Z"
+      "type": "ai_intent_parsed",
+      "message": "AI parsed owner command with action execute.",
+      "metadata": {
+        "commandId": "ai_5535ec5be369420d",
+        "action": "execute",
+        "supplierId": "sup_1",
+        "amountNgn": 1500,
+        "confidence": 0.9
+      },
+      "createdAt": "2026-04-06T21:32:19.607Z"
     }
   ],
-  "activityEvents": [],
-  "webhookInbox": [
-    {
-      "id": "wh_1",
-      "provider": "zendfi",
-      "eventId": "evt_1",
-      "eventType": "WithdrawalCompleted",
-      "signature": "sig",
-      "status": "processed",
-      "receivedAt": "2026-04-05T18:30:11.680Z",
-      "processedAt": "2026-04-05T18:30:11.680Z",
-      "payload": {}
-    },
-    {
-      "id": "wh_2",
-      "provider": "zendfi",
-      "eventId": "evt_2",
-      "eventType": "Unknown",
-      "signature": "sig",
-      "status": "ignored",
-      "receivedAt": "2026-04-05T18:30:11.680Z",
-      "processedAt": "2026-04-05T18:30:11.680Z",
-      "payload": {}
-    }
-  ],
+  "webhookInbox": [],
   "retryJobs": [],
   "ownerNotifications": [],
-  "pilotModes": [],
-  "aiCommands": [],
+  "pilotModes": [
+    {
+      "businessId": "biz_1",
+      "mode": "autonomous",
+      "maxAutoExecutions": 5,
+      "autoExecutedCount": 0,
+      "updatedAt": "2026-04-06T21:32:19.562Z"
+    }
+  ],
+  "aiCommands": [
+    {
+      "id": "ai_5535ec5be369420d",
+      "businessId": "biz_1",
+      "command": "Pay Musa NGN 1500 for tomatoes",
+      "parsedSupplierId": "sup_1",
+      "parsedAmountNgn": 1500,
+      "action": "execute",
+      "confidence": 0.9,
+      "explanation": "Command parsed and within guardrails for execution.",
+      "createdAt": "2026-04-06T21:32:19.579Z"
+    }
+  ],
   "alerts": [],
-  "credentialRotations": []
+  "credentialRotations": [],
+  "authUsers": []
 }

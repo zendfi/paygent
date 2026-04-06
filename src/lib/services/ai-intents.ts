@@ -44,13 +44,56 @@ function parseAmountNgn(command: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function normalizeForMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b(alhaji|mr|mrs|ms|dr|chief)\b/g, " ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function toTokens(value: string): string[] {
+  return normalizeForMatch(value)
+    .split(" ")
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+}
+
 function inferSupplierId(command: string, suppliers: Array<{ id: string; supplierName: string; accountName: string; accountNumber: string }>): string | undefined {
-  const lower = command.toLowerCase();
-  const match = suppliers.find((supplier) =>
-    lower.includes(supplier.supplierName.toLowerCase()) ||
-    lower.includes(supplier.accountName.toLowerCase()) ||
-    lower.includes(supplier.accountNumber.toLowerCase()),
-  );
+  const normalizedCommand = normalizeForMatch(command);
+  const commandTokens = new Set(toTokens(command));
+  const match = suppliers.find((supplier) => {
+    const supplierName = normalizeForMatch(supplier.supplierName);
+    const accountName = normalizeForMatch(supplier.accountName);
+
+    if (
+      normalizedCommand.includes(supplierName) ||
+      normalizedCommand.includes(accountName) ||
+      normalizedCommand.includes(supplier.accountNumber.toLowerCase())
+    ) {
+      return true;
+    }
+
+    const supplierTokens = new Set([...toTokens(supplier.supplierName), ...toTokens(supplier.accountName)]);
+    if (supplierTokens.size === 0) {
+      return false;
+    }
+
+    let overlap = 0;
+    supplierTokens.forEach((token) => {
+      if (commandTokens.has(token)) {
+        overlap += 1;
+      }
+    });
+
+    // One strong token (>=5 chars) or two regular token matches count as a supplier hit.
+    if (overlap >= 2) {
+      return true;
+    }
+
+    return [...supplierTokens].some((token) => token.length >= 5 && commandTokens.has(token));
+  });
 
   return match?.id;
 }
