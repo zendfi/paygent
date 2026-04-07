@@ -1,5 +1,6 @@
 import { logAudit } from "@/lib/audit/logger";
 import { getSubaccountByBusinessId, setBusinessStatus } from "@/lib/services/businesses";
+import { revokeSigningGrantsForBusiness } from "@/lib/services/signing-grants";
 import { freezeSubaccount } from "@/lib/zendfi/client";
 import { NextResponse } from "next/server";
 
@@ -27,19 +28,27 @@ export async function POST(
       body.reason ?? "manual_override",
     );
     await setBusinessStatus(businessId, "frozen");
+    const revokedSigningGrants = await revokeSigningGrantsForBusiness(
+      businessId,
+      body.reason ?? "manual_override",
+    );
 
     logAudit({
       actor: "owner",
       action: "business_frozen",
       result: "success",
       businessId,
-      metadata: { subaccountId: subaccount.zendfiSubaccountId },
+      metadata: {
+        subaccountId: subaccount.zendfiSubaccountId,
+        revokedSigningGrants,
+      },
     });
 
     return NextResponse.json({
       success: true,
       businessId,
       status: "frozen",
+      revokedSigningGrants,
     });
   } catch (error) {
     const { businessId } = await params;

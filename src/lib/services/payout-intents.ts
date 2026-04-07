@@ -1,4 +1,5 @@
 import type { PolicySnapshot, PayoutIntentInput } from "@/lib/domain/types";
+import { getEnv } from "@/lib/config/env";
 import { evaluatePolicy } from "@/lib/policies/engine";
 import { addActivityEvent } from "@/lib/services/activity";
 import { getBusinessById } from "@/lib/services/businesses";
@@ -92,6 +93,14 @@ export async function createAndEvaluatePayoutIntent(
     status = "approval_required";
     if (!decision.reasonCodes.includes("safe_launch_control")) {
       decision.reasonCodes.push("safe_launch_control");
+    }
+  }
+
+  const trustRampThreshold = getEnv().trustRampApprovalThresholdNgn;
+  if (status === "queued" && input.amountNgn >= trustRampThreshold) {
+    status = "approval_required";
+    if (!decision.reasonCodes.includes("trust_ramp_threshold")) {
+      decision.reasonCodes.push("trust_ramp_threshold");
     }
   }
 

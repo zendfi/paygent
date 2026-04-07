@@ -184,11 +184,68 @@ export async function unfreezeSubaccount(subaccountId: string, reason: string): 
   });
 }
 
+export async function createSigningGrant(input: {
+  subaccountId: string;
+  perTxLimitNgn: number;
+  dailyCapNgn: number;
+  approvalThresholdNgn: number;
+  activeDaysUtc: number[];
+  activeStartTimeUtc: string;
+  activeEndTimeUtc: string;
+  allowedBankIds: string[];
+  allowedAccountNumbers: string[];
+  maxUses: number;
+  ttlSeconds: number;
+  requestedBy: string;
+  reason: string;
+}): Promise<{ id: string; expiresAt: string }> {
+  const env = getEnv();
+  if (env.mockZendfi) {
+    return {
+      id: `ssgt_${crypto.randomUUID().replaceAll("-", "").slice(0, 14)}`,
+      expiresAt: new Date(Date.now() + input.ttlSeconds * 1000).toISOString(),
+    };
+  }
+
+  const response = await zendfiRequest<{
+    id: string;
+    expires_at?: string;
+    expiresAt?: string;
+  }>({
+    path: "/merchants/me/subaccounts/signing-grants",
+    method: "POST",
+    body: {
+      sub_account_id: input.subaccountId,
+      per_tx_limit_usdc: input.perTxLimitNgn,
+      total_limit_usdc: input.dailyCapNgn,
+      approval_threshold_usdc: input.approvalThresholdNgn,
+      active_days_utc: input.activeDaysUtc,
+      active_start_time_utc: input.activeStartTimeUtc,
+      active_end_time_utc: input.activeEndTimeUtc,
+      allowed_bank_ids: input.allowedBankIds,
+      allowed_account_numbers: input.allowedAccountNumbers,
+      max_uses: input.maxUses,
+      ttl_seconds: input.ttlSeconds,
+      requested_by: input.requestedBy,
+      reason: input.reason,
+    },
+  });
+
+  return {
+    id: response.id,
+    expiresAt:
+      response.expires_at ??
+      response.expiresAt ??
+      new Date(Date.now() + input.ttlSeconds * 1000).toISOString(),
+  };
+}
+
 export async function withdrawSubaccountToBank(input: {
   subaccountId: string;
   amountUsdc: number;
   bankId: string;
   accountNumber: string;
+  signingGrantId?: string;
 }): Promise<{
   success: boolean;
   orderId: string;
@@ -217,6 +274,7 @@ export async function withdrawSubaccountToBank(input: {
       amount_usdc: input.amountUsdc,
       bank_id: input.bankId,
       account_number: input.accountNumber,
+      signing_grant_id: input.signingGrantId,
       mode: "live",
     },
   });

@@ -4,6 +4,7 @@ import {
 } from "@/lib/services/businesses";
 import { getActivePolicy } from "@/lib/services/policies";
 import { getOrCreatePilotMode } from "@/lib/services/pilot";
+import { getActiveSigningGrantByBusinessId } from "@/lib/services/signing-grants";
 import { getTodaySpentNgn } from "@/lib/services/spending";
 import { listSuppliers } from "@/lib/services/suppliers";
 import { getSubaccountBalance } from "@/lib/zendfi/client";
@@ -25,17 +26,32 @@ export async function GET(
     );
   }
 
-  const [subaccount, suppliers, activePolicy, spentTodayNgn, pilotMode] = await Promise.all([
+  const [subaccount, suppliers, activePolicy, spentTodayNgn, pilotMode, activeSigningGrant] = await Promise.all([
     getSubaccountByBusinessId(businessId),
     listSuppliers(businessId),
     getActivePolicy(businessId),
     getTodaySpentNgn(businessId),
     getOrCreatePilotMode(businessId),
+    getActiveSigningGrantByBusinessId(businessId),
   ]);
 
-  const subaccountBalance = subaccount
-    ? await getSubaccountBalance(subaccount.zendfiSubaccountId)
-    : undefined;
+  let subaccountBalance:
+    | {
+        availableUsdc: number;
+        pendingUsdc: number;
+        totalUsdc: number;
+      }
+    | undefined;
+  let subaccountBalanceError: string | undefined;
+
+  if (subaccount) {
+    try {
+      subaccountBalance = await getSubaccountBalance(subaccount.zendfiSubaccountId);
+    } catch (error) {
+      subaccountBalanceError =
+        error instanceof Error ? error.message : "balance_lookup_failed";
+    }
+  }
 
   return NextResponse.json({
     business,
@@ -44,6 +60,8 @@ export async function GET(
     activePolicy,
     spentTodayNgn,
     pilotMode,
+    activeSigningGrant,
     subaccountBalance,
+    subaccountBalanceError,
   });
 }

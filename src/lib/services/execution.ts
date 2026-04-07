@@ -2,6 +2,10 @@ import { addActivityEvent } from "@/lib/services/activity";
 import { getSubaccountByBusinessId } from "@/lib/services/businesses";
 import { sendOwnerNotification } from "@/lib/services/notifications";
 import { getPayoutIntentById, setPayoutIntentStatus } from "@/lib/services/payout-intents";
+import {
+  consumeSigningGrantUse,
+  ensureActiveSigningGrantForBusiness,
+} from "@/lib/services/signing-grants";
 import { getSupplierById } from "@/lib/services/suppliers";
 import { readStore, writeStore } from "@/lib/storage/store";
 import type { PayoutExecutionRecord, RetryJobRecord } from "@/lib/storage/types";
@@ -81,6 +85,12 @@ export async function executePayoutIntent(intentId: string): Promise<PayoutExecu
     throw new Error("subaccount_not_initialized");
   }
 
+  const signingGrant = await ensureActiveSigningGrantForBusiness({
+    businessId: intent.businessId,
+    requestedBy: "paygent-execution-engine",
+    reason: "autonomous_payout_execution",
+  });
+
   await setPayoutIntentStatus(intent.id, "executing");
 
   const timestamp = nowIso();
@@ -114,6 +124,7 @@ export async function executePayoutIntent(intentId: string): Promise<PayoutExecu
       amountUsdc: intent.amountNgn,
       bankId: supplier.bankId,
       accountNumber: supplier.accountNumber,
+      signingGrantId: signingGrant.zendfiSigningGrantId,
     });
 
     const nextStore = await readStore();
@@ -131,6 +142,7 @@ export async function executePayoutIntent(intentId: string): Promise<PayoutExecu
     await writeStore(nextStore);
 
     if (response.success) {
+      await consumeSigningGrantUse(signingGrant.id);
       await addActivityEvent({
         businessId: intent.businessId,
         type: "webhook_received",

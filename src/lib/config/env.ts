@@ -13,6 +13,11 @@ export type PaygentEnv = {
   zendfiWebhookSecret?: string;
   zendfiWebhookToleranceSeconds: number;
   geminiApiKey?: string;
+  smsWebhookUrl?: string;
+  smsWebhookAuthToken?: string;
+  trustRampApprovalThresholdNgn: number;
+  signingGrantTtlSeconds: number;
+  signingGrantMaxUses: number;
   mockZendfi: boolean;
 };
 
@@ -86,6 +91,14 @@ export function getEnv(): PaygentEnv {
     zendfiWebhookSecret: process.env.ZENDFI_WEBHOOK_SECRET,
     zendfiWebhookToleranceSeconds: readNumberEnv(process.env.ZENDFI_WEBHOOK_TOLERANCE_SECONDS, 300),
     geminiApiKey: process.env.GEMINI_API_KEY,
+    smsWebhookUrl: process.env.PAYGENT_SMS_WEBHOOK_URL,
+    smsWebhookAuthToken: process.env.PAYGENT_SMS_WEBHOOK_AUTH_TOKEN,
+    trustRampApprovalThresholdNgn: readNumberEnv(
+      process.env.PAYGENT_TRUST_RAMP_APPROVAL_THRESHOLD_NGN,
+      25000,
+    ),
+    signingGrantTtlSeconds: readNumberEnv(process.env.PAYGENT_SIGNING_GRANT_TTL_SECONDS, 2_592_000),
+    signingGrantMaxUses: readNumberEnv(process.env.PAYGENT_SIGNING_GRANT_MAX_USES, 5_000),
     mockZendfi: readBooleanEnv(process.env.MOCK_ZENDFI, nodeEnv !== "production"),
   };
 

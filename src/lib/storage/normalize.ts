@@ -3,6 +3,7 @@ import type { PaygentStore } from "@/lib/storage/types";
 export const EMPTY_STORE: PaygentStore = {
   businesses: [],
   subaccounts: [],
+  signingGrants: [],
   suppliers: [],
   policyVersions: [],
   dailySpendCounters: [],
@@ -23,6 +24,7 @@ export function normalizeStore(parsed: Partial<PaygentStore>): PaygentStore {
   return {
     businesses: parsed.businesses ?? [],
     subaccounts: parsed.subaccounts ?? [],
+    signingGrants: parsed.signingGrants ?? [],
     suppliers: parsed.suppliers ?? [],
     policyVersions: parsed.policyVersions ?? [],
     dailySpendCounters: parsed.dailySpendCounters ?? [],

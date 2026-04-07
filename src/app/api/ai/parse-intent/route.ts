@@ -33,6 +33,7 @@ export async function POST(request: Request) {
           intentId: string;
           status: string;
           execution?: { id: string; status: string };
+          executionError?: string;
         }
       | undefined;
 
@@ -58,8 +59,10 @@ export async function POST(request: Request) {
             id: execution.id,
             status: execution.status,
           };
-        } catch {
-          // Keep parse endpoint non-blocking even if execution handoff fails.
+        } catch (error) {
+          // Keep parse endpoint non-blocking but return the execution failure to the client.
+          submission.executionError =
+            error instanceof Error ? error.message : "execution_handoff_failed";
         }
       }
     }
@@ -74,6 +77,7 @@ export async function POST(request: Request) {
         confidence: parsed.decision.confidence,
         submit: Boolean(body.submit),
         submittedIntentId: submission?.intentId,
+        executionError: submission?.executionError,
       },
     });
 

@@ -5,12 +5,14 @@ import type { PaygentStore } from "@/lib/storage/types";
 
 const mockWithdrawSubaccountToBank = vi.fn();
 const mockGetWithdrawalStatus = vi.fn();
+const mockCreateSigningGrant = vi.fn();
 
 vi.mock("@/lib/zendfi/client", async () => {
   return {
     withdrawSubaccountToBank: (...args: unknown[]) =>
       mockWithdrawSubaccountToBank(...args),
     getWithdrawalStatus: (...args: unknown[]) => mockGetWithdrawalStatus(...args),
+    createSigningGrant: (...args: unknown[]) => mockCreateSigningGrant(...args),
   };
 });
 
@@ -71,6 +73,20 @@ function seedBaseStore(): PaygentStore {
     updatedAt: timestamp,
   });
 
+  store.policyVersions.push({
+    id: "pol_1",
+    businessId: "biz_1",
+    status: "active",
+    maxPerTxNgn: 50000,
+    dailyCapNgn: 200000,
+    approvalThresholdNgn: 30000,
+    activeDaysUtc: [0, 1, 2, 3, 4, 5, 6],
+    activeStartTimeUtc: "00:00",
+    activeEndTimeUtc: "23:59",
+    createdAt: timestamp,
+    activatedAt: timestamp,
+  });
+
   store.payoutIntents.push({
     id: "pi_1",
     businessId: "biz_1",
@@ -95,6 +111,10 @@ function seedBaseStore(): PaygentStore {
 describe("execution week 5 reliability", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockCreateSigningGrant.mockResolvedValue({
+      id: "ssgt_test_1",
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    });
     await writeStore(seedBaseStore());
   });
 

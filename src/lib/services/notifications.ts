@@ -1,4 +1,5 @@
 import { addActivityEvent } from "@/lib/services/activity";
+import { getEnv } from "@/lib/config/env";
 import { getBusinessById } from "@/lib/services/businesses";
 import { readStore, writeStore } from "@/lib/storage/store";
 import type { OwnerNotificationRecord } from "@/lib/storage/types";
@@ -9,6 +10,42 @@ function makeId(prefix: string): string {
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+async function sendSmsNotification(input: {
+  phone: string;
+  message: string;
+  eventType: OwnerNotificationRecord["eventType"];
+  businessId: string;
+  intentId: string;
+}): Promise<boolean> {
+  const env = getEnv();
+  if (!env.smsWebhookUrl) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(env.smsWebhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(env.smsWebhookAuthToken
+          ? { Authorization: `Bearer ${env.smsWebhookAuthToken}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        to: input.phone,
+        message: input.message,
+        eventType: input.eventType,
+        businessId: input.businessId,
+        intentId: input.intentId,
+      }),
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 export async function listOwnerNotificationsByBusiness(
@@ -34,12 +71,20 @@ export async function sendOwnerNotification(input: {
   }
 
   const timestamp = nowIso();
+  const smsSent = await sendSmsNotification({
+    phone: business.ownerPhone,
+    message: input.message,
+    eventType: input.eventType,
+    businessId: input.businessId,
+    intentId: input.intentId,
+  });
+
   const notification: OwnerNotificationRecord = {
     id: makeId("notif"),
     businessId: input.businessId,
     intentId: input.intentId,
     eventType: input.eventType,
-    channel: "in_app",
+    channel: smsSent ? "sms" : "in_app",
     status: "sent",
     message: input.message,
     createdAt: timestamp,
@@ -51,12 +96,16 @@ export async function sendOwnerNotification(input: {
 
   await addActivityEvent({
     businessId: input.businessId,
-    type: "notification_sent",
-    message: `Owner notification sent (${input.eventType}) for intent ${input.intentId}.`,
+    type: smsSent ? "notification_sent" : "notification_failed",
+    message: smsSent
+      ? `Owner notification sent (${input.eventType}) for intent ${input.intentId}.`
+      : `Owner notification SMS delivery failed for intent ${input.intentId}; kept in app.`,
     metadata: {
       notificationId: notification.id,
       ownerPhone: business.ownerPhone,
       eventType: input.eventType,
+      channel: notification.channel,
+      deliveryStatus: smsSent ? "sent" : "failed",
     },
   });
 

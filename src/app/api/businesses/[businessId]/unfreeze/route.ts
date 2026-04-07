@@ -1,5 +1,6 @@
 import { logAudit } from "@/lib/audit/logger";
 import { getSubaccountByBusinessId, setBusinessStatus } from "@/lib/services/businesses";
+import { ensureActiveSigningGrantForBusiness } from "@/lib/services/signing-grants";
 import { unfreezeSubaccount } from "@/lib/zendfi/client";
 import { NextResponse } from "next/server";
 
@@ -24,6 +25,24 @@ export async function POST(
 
     await unfreezeSubaccount(subaccount.zendfiSubaccountId, body.reason ?? "manual_override");
     await setBusinessStatus(businessId, "active");
+    let signingGrant:
+      | {
+          id: string;
+          zendfiSigningGrantId: string;
+        }
+      | undefined;
+    let signingGrantWarning: string | undefined;
+
+    try {
+      signingGrant = await ensureActiveSigningGrantForBusiness({
+        businessId,
+        requestedBy: "owner",
+        reason: "business_unfrozen",
+      });
+    } catch (error) {
+      signingGrantWarning =
+        error instanceof Error ? error.message : "signing_grant_reprovision_failed";
+    }
 
     logAudit({
       actor: "owner",
@@ -32,6 +51,8 @@ export async function POST(
       businessId,
       metadata: {
         subaccountId: subaccount.zendfiSubaccountId,
+        signingGrantId: signingGrant?.zendfiSigningGrantId,
+        signingGrantWarning,
       },
     });
 
@@ -39,6 +60,8 @@ export async function POST(
       success: true,
       businessId,
       status: "active",
+      signingGrant,
+      signingGrantWarning,
     });
   } catch (error) {
     logAudit({

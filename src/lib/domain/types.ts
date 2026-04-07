@@ -1,4 +1,8 @@
-export type PayoutSource = "owner_command" | "dashboard_action" | "inventory_trigger";
+export type PayoutSource =
+  | "owner_command"
+  | "dashboard_action"
+  | "inventory_trigger"
+  | "cashflow_trigger";
 
 export type PayoutIntentInput = {
   businessId: string;

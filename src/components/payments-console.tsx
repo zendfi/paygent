@@ -39,6 +39,15 @@ type BusinessDetailResponse = {
     pendingUsdc: number;
     totalUsdc: number;
   };
+  subaccountBalanceError?: string;
+  activeSigningGrant?: {
+    id: string;
+    zendfiSigningGrantId: string;
+    status: "active" | "revoked" | "expired";
+    maxUses: number;
+    usedCount: number;
+    expiresAt: string;
+  };
   suppliers: Supplier[];
   activePolicy?: ActivePolicy;
   spentTodayNgn: number;
@@ -71,6 +80,7 @@ type AiParseResponse = {
       id: string;
       status: string;
     };
+    executionError?: string;
   };
 };
 
@@ -163,16 +173,6 @@ export function PaymentsConsole() {
   const [submitParsedCommand, setSubmitParsedCommand] = useState(true);
   const [pilotMode, setPilotMode] = useState<"assisted" | "autonomous">("assisted");
   const [pilotAutoLimit, setPilotAutoLimit] = useState("3");
-  const [rotationCredentialType, setRotationCredentialType] = useState<
-    "owner_api_token" | "zendfi_api_key" | "zendfi_webhook_secret"
-  >("owner_api_token");
-  const [rotationRequestedBy, setRotationRequestedBy] = useState("ops-owner");
-  const [rotationReason, setRotationReason] = useState("scheduled_monthly_rotation");
-  const [rotationIdToComplete, setRotationIdToComplete] = useState("");
-  const [rotationCompletionNotes, setRotationCompletionNotes] = useState("rotated_and_verified");
-  const [incidentScenario, setIncidentScenario] = useState<
-    "webhook_outage" | "provider_partial_failure"
-  >("webhook_outage");
 
   const selectedBusiness = useMemo(
     () => businesses.find((business) => business.id === selectedBusinessId),
@@ -393,6 +393,13 @@ export function PaymentsConsole() {
       return;
     }
 
+    if (!selectedBusinessDetail?.subaccount) {
+      setLatestTopupUrl("");
+      setLatestTopupLinkId("");
+      setLastErrorMessage("Set up wallet first before creating an add-funds link.");
+      return;
+    }
+
     const amount = Number(topupAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       setLatestTopupUrl("");
@@ -433,7 +440,7 @@ export function PaymentsConsole() {
     } else {
       setLastErrorMessage("Top-up link was created but no URL was returned. Check technical log.");
     }
-  }, [requireBusinessSelection, selectedBusinessId, topupAmount, writeLog]);
+  }, [requireBusinessSelection, selectedBusinessDetail, selectedBusinessId, topupAmount, writeLog]);
 
   const freezeBusiness = useCallback(async () => {
     if (!requireBusinessSelection()) {
@@ -519,6 +526,11 @@ export function PaymentsConsole() {
       return;
     }
 
+    if (!selectedBusinessDetail?.activePolicy) {
+      setLastErrorMessage("Set spending rules first before checking a new payment.");
+      return;
+    }
+
     if (!payoutSupplierId) {
       setLastErrorMessage("Choose a supplier first before checking a payment.");
       return;
@@ -550,6 +562,7 @@ export function PaymentsConsole() {
     refreshBusinessDetail,
     refreshActivity,
     requireBusinessSelection,
+    selectedBusinessDetail,
     selectedBusinessId,
     writeLog,
   ]);
@@ -636,9 +649,29 @@ export function PaymentsConsole() {
 
     const data = (await response.json()) as AiParseResponse;
     writeLog(data);
+    if (
+      data.parsed?.decision?.action === "defer" &&
+      typeof data.parsed?.decision?.explanation === "string"
+    ) {
+      setLastErrorMessage(data.parsed.decision.explanation);
+    }
+
+    if (typeof data.submission?.executionError === "string" && data.submission.executionError) {
+      setLastErrorMessage(data.submission.executionError);
+    }
+
     await refreshBusinessDetail();
     await refreshActivity();
-  }, [ownerCommand, refreshActivity, refreshBusinessDetail, requireBusinessSelection, selectedBusinessId, submitParsedCommand, writeLog]);
+  }, [
+    ownerCommand,
+    refreshActivity,
+    refreshBusinessDetail,
+    requireBusinessSelection,
+    selectedBusinessId,
+    setLastErrorMessage,
+    submitParsedCommand,
+    writeLog,
+  ]);
 
   const updatePilotMode = useCallback(async () => {
     if (!requireBusinessSelection()) {
@@ -660,125 +693,6 @@ export function PaymentsConsole() {
     writeLog(data);
     await refreshBusinessDetail();
   }, [pilotAutoLimit, pilotMode, refreshBusinessDetail, requireBusinessSelection, selectedBusinessId, writeLog]);
-
-  const runLoadCheck = useCallback(async () => {
-    const response = await fetch("/api/admin/load-check", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ iterations: 120 }),
-    });
-    writeLog(await response.json());
-  }, [writeLog]);
-
-  const expandPilot = useCallback(async () => {
-    const response = await fetch("/api/pilots/expand", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ targetCount: 3, dryRun: false }),
-    });
-    writeLog(await response.json());
-    await refreshBusinesses();
-  }, [refreshBusinesses, writeLog]);
-
-  const fetchMetrics = useCallback(async () => {
-    const response = await fetch("/api/admin/metrics", { cache: "no-store" });
-    writeLog(await response.json());
-  }, [writeLog]);
-
-  const fetchSla = useCallback(async () => {
-    const response = await fetch("/api/admin/sla", { cache: "no-store" });
-    writeLog(await response.json());
-  }, [writeLog]);
-
-  const evaluateAlerts = useCallback(async () => {
-    const response = await fetch("/api/admin/alerts/evaluate", {
-      method: "POST",
-    });
-    writeLog(await response.json());
-  }, [writeLog]);
-
-  const fetchAlerts = useCallback(async () => {
-    const response = await fetch("/api/admin/alerts?limit=25", { cache: "no-store" });
-    writeLog(await response.json());
-  }, [writeLog]);
-
-  const requestRotation = useCallback(async () => {
-    const response = await fetch("/api/admin/credentials/rotations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        credentialType: rotationCredentialType,
-        requestedBy: rotationRequestedBy,
-        reason: rotationReason,
-      }),
-    });
-    writeLog(await response.json());
-  }, [rotationCredentialType, rotationReason, rotationRequestedBy, writeLog]);
-
-  const listRotations = useCallback(async () => {
-    const response = await fetch("/api/admin/credentials/rotations?limit=20", {
-      cache: "no-store",
-    });
-    writeLog(await response.json());
-  }, [writeLog]);
-
-  const completeRotation = useCallback(async () => {
-    if (!rotationIdToComplete.trim()) {
-      return;
-    }
-    const response = await fetch(
-      `/api/admin/credentials/rotations/${rotationIdToComplete.trim()}/complete`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ notes: rotationCompletionNotes }),
-      },
-    );
-    writeLog(await response.json());
-  }, [rotationCompletionNotes, rotationIdToComplete, writeLog]);
-
-  const fetchRunbooks = useCallback(async () => {
-    const response = await fetch("/api/admin/runbooks", { cache: "no-store" });
-    writeLog(await response.json());
-  }, [writeLog]);
-
-  const fetchPilotChecklist = useCallback(async () => {
-    const response = await fetch("/api/admin/pilot-checklist?targetCount=3", {
-      cache: "no-store",
-    });
-    writeLog(await response.json());
-  }, [writeLog]);
-
-  const runIncidentSimulation = useCallback(async () => {
-    const response = await fetch("/api/admin/incident-simulation/run", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ scenario: incidentScenario }),
-    });
-    writeLog(await response.json());
-  }, [incidentScenario, writeLog]);
-
-  const fetchKpiReport = useCallback(async () => {
-    const response = await fetch("/api/admin/kpi-report", { cache: "no-store" });
-    writeLog(await response.json());
-  }, [writeLog]);
-
-  const fetchLaunchRecommendation = useCallback(async () => {
-    const response = await fetch("/api/admin/launch-recommendation", {
-      cache: "no-store",
-    });
-    writeLog(await response.json());
-  }, [writeLog]);
 
   return (
     <section className="mt-8 rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
@@ -952,11 +866,15 @@ export function PaymentsConsole() {
           />
           <button
             type="button"
-            disabled={Boolean(activeAction)}
+            disabled={Boolean(activeAction) || !selectedBusinessDetail?.subaccount}
             onClick={() => void runAction("add_funds_link", createTopupLink)}
             className="rounded-md border border-indigo-400/40 bg-indigo-400/10 px-3 py-2 text-sm font-semibold text-indigo-200"
           >
-            {isActionActive("add_funds_link") ? "Processing..." : "Add funds link"}
+            {isActionActive("add_funds_link")
+              ? "Processing..."
+              : selectedBusinessDetail?.subaccount
+                ? "Add funds link"
+                : "Set up wallet first"}
           </button>
         </div>
         {latestTopupUrl ? (
@@ -1105,176 +1023,11 @@ export function PaymentsConsole() {
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-sm font-semibold text-slate-200">System tools</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-4">
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("check_load", runLoadCheck)}
-            className="rounded-md border border-emerald-300/50 bg-emerald-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200"
-          >
-            {isActionActive("check_load") ? "Processing..." : "Check load"}
-          </button>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("view_metrics", fetchMetrics)}
-            className="rounded-md border border-sky-300/50 bg-sky-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-sky-200"
-          >
-            {isActionActive("view_metrics") ? "Processing..." : "View metrics"}
-          </button>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("view_uptime", fetchSla)}
-            className="rounded-md border border-indigo-300/50 bg-indigo-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-indigo-200"
-          >
-            {isActionActive("view_uptime") ? "Processing..." : "View uptime"}
-          </button>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("expand_pilot", expandPilot)}
-            className="rounded-md border border-amber-300/50 bg-amber-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-200"
-          >
-            {isActionActive("expand_pilot") ? "Processing..." : "Expand Pilot to 3"}
-          </button>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("evaluate_alerts", evaluateAlerts)}
-            className="rounded-md border border-rose-300/50 bg-rose-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-rose-200"
-          >
-            {isActionActive("evaluate_alerts") ? "Processing..." : "Evaluate Alerts"}
-          </button>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("view_alerts", fetchAlerts)}
-            className="rounded-md border border-fuchsia-300/50 bg-fuchsia-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-fuchsia-200"
-          >
-            {isActionActive("view_alerts") ? "Processing..." : "View alerts"}
-          </button>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("list_rotations", listRotations)}
-            className="rounded-md border border-teal-300/50 bg-teal-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-teal-200"
-          >
-            {isActionActive("list_rotations") ? "Processing..." : "List Rotations"}
-          </button>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("view_runbooks", fetchRunbooks)}
-            className="rounded-md border border-slate-300/50 bg-slate-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-200"
-          >
-            {isActionActive("view_runbooks") ? "Processing..." : "View runbooks"}
-          </button>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("pilot_checklist", fetchPilotChecklist)}
-            className="rounded-md border border-lime-300/50 bg-lime-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-lime-200"
-          >
-            {isActionActive("pilot_checklist") ? "Processing..." : "Pilot Checklist"}
-          </button>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("business_report", fetchKpiReport)}
-            className="rounded-md border border-orange-300/50 bg-orange-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-orange-200"
-          >
-            {isActionActive("business_report") ? "Processing..." : "Business report"}
-          </button>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("go_live_recommendation", fetchLaunchRecommendation)}
-            className="rounded-md border border-emerald-300/50 bg-emerald-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200"
-          >
-            {isActionActive("go_live_recommendation") ? "Processing..." : "Go-live recommendation"}
-          </button>
-        </div>
-
-        <div className="mt-3 grid gap-2 sm:grid-cols-4">
-          <select
-            value={incidentScenario}
-            onChange={(event) =>
-              setIncidentScenario(event.target.value as "webhook_outage" | "provider_partial_failure")
-            }
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-xs"
-          >
-            <option value="webhook_outage">webhook_outage</option>
-            <option value="provider_partial_failure">provider_partial_failure</option>
-          </select>
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("simulate_issue", runIncidentSimulation)}
-            className="rounded-md bg-amber-300 px-3 py-2 text-xs font-semibold text-slate-900"
-          >
-            {isActionActive("simulate_issue") ? "Processing..." : "Simulate issue"}
-          </button>
-          <div className="hidden sm:block" />
-          <div className="hidden sm:block" />
-          <select
-            value={rotationCredentialType}
-            onChange={(event) =>
-              setRotationCredentialType(
-                event.target.value as
-                  | "owner_api_token"
-                  | "zendfi_api_key"
-                  | "zendfi_webhook_secret",
-              )
-            }
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-xs"
-          >
-            <option value="owner_api_token">owner_api_token</option>
-            <option value="zendfi_api_key">zendfi_api_key</option>
-            <option value="zendfi_webhook_secret">zendfi_webhook_secret</option>
-          </select>
-          <input
-            value={rotationRequestedBy}
-            onChange={(event) => setRotationRequestedBy(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-xs"
-            placeholder="Requested by"
-          />
-          <input
-            value={rotationReason}
-            onChange={(event) => setRotationReason(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-xs"
-            placeholder="Why rotate"
-          />
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("request_rotation", requestRotation)}
-            className="rounded-md bg-cyan-300 px-3 py-2 text-xs font-semibold text-slate-900"
-          >
-            {isActionActive("request_rotation") ? "Processing..." : "Request key rotation"}
-          </button>
-          <input
-            value={rotationIdToComplete}
-            onChange={(event) => setRotationIdToComplete(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-xs sm:col-span-2"
-            placeholder="Rotation ID"
-          />
-          <input
-            value={rotationCompletionNotes}
-            onChange={(event) => setRotationCompletionNotes(event.target.value)}
-            className="rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-xs"
-            placeholder="Completion notes"
-          />
-          <button
-            type="button"
-            disabled={Boolean(activeAction)}
-            onClick={() => void runAction("complete_rotation", completeRotation)}
-            className="rounded-md bg-emerald-300 px-3 py-2 text-xs font-semibold text-slate-900"
-          >
-            {isActionActive("complete_rotation") ? "Processing..." : "Mark rotation complete"}
-          </button>
-        </div>
+        <p className="text-sm font-semibold text-slate-200">Merchant controls</p>
+        <p className="mt-2 text-sm text-slate-400">
+          Core merchant actions only: reconcile payment status and retry failed payouts.
+          Internal simulation, credential rotation, and launch tooling have been removed from this view.
+        </p>
       </div>
         </>
       ) : null}
@@ -1445,6 +1198,14 @@ export function PaymentsConsole() {
                 {selectedBusinessDetail.pilotMode?.autoExecutedCount ?? 0}/
                 {selectedBusinessDetail.pilotMode?.maxAutoExecutions ?? 3}
               </p>
+              {selectedBusinessDetail.activeSigningGrant ? (
+                <p>
+                  Signing grant: {selectedBusinessDetail.activeSigningGrant.usedCount}/
+                  {selectedBusinessDetail.activeSigningGrant.maxUses} used
+                </p>
+              ) : (
+                <p className="text-amber-300">Signing grant pending policy setup.</p>
+              )}
             </div>
           ) : (
             <p className="mt-2 text-slate-500">Wallet not set up.</p>

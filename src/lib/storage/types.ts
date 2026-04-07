@@ -35,6 +35,31 @@ export type Subaccount = {
   zendfiSubaccountId: string;
   walletAddress: string;
   status: "active" | "frozen";
+  activeSigningGrantId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SigningGrantRecord = {
+  id: string;
+  businessId: string;
+  subaccountId: string;
+  zendfiSubaccountId: string;
+  zendfiSigningGrantId: string;
+  status: "active" | "revoked" | "expired";
+  perTxLimitNgn: number;
+  dailyCapNgn: number;
+  maxUses: number;
+  usedCount: number;
+  approvalThresholdNgn: number;
+  activeDaysUtc: number[];
+  activeStartTimeUtc: string;
+  activeEndTimeUtc: string;
+  allowedBankIds: string[];
+  allowedAccountNumbers: string[];
+  requestedBy: string;
+  reason: string;
+  expiresAt: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -76,7 +101,7 @@ export type PayoutIntentRecord = {
   id: string;
   businessId: string;
   supplierId: string;
-  source: "owner_command" | "dashboard_action" | "inventory_trigger";
+  source: "owner_command" | "dashboard_action" | "inventory_trigger" | "cashflow_trigger";
   amountNgn: number;
   reason?: string;
   idempotencyKey: string;
@@ -144,7 +169,7 @@ export type OwnerNotificationRecord = {
   businessId: string;
   intentId: string;
   eventType: "payout_completed" | "payout_failed" | "retry_exhausted";
-  channel: "in_app";
+  channel: "sms" | "in_app";
   status: "sent" | "failed";
   message: string;
   createdAt: string;
@@ -212,6 +237,7 @@ export type ActivityEvent = {
 export type PaygentStore = {
   businesses: Business[];
   subaccounts: Subaccount[];
+  signingGrants?: SigningGrantRecord[];
   suppliers: Supplier[];
   policyVersions: PolicyVersion[];
   dailySpendCounters: DailySpendCounter[];

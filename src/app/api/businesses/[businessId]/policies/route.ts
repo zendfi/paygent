@@ -1,5 +1,6 @@
 import { logAudit } from "@/lib/audit/logger";
 import { createPolicyVersion, listPolicies } from "@/lib/services/policies";
+import { ensureActiveSigningGrantForBusiness, revokeSigningGrantsForBusiness } from "@/lib/services/signing-grants";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -36,6 +37,26 @@ export async function POST(
       activeEndTimeUtc: body.activeEndTimeUtc ?? "",
     });
 
+    await revokeSigningGrantsForBusiness(businessId, "policy_rotated");
+    let signingGrant:
+      | {
+          id: string;
+          zendfiSigningGrantId: string;
+        }
+      | undefined;
+    let signingGrantWarning: string | undefined;
+
+    try {
+      signingGrant = await ensureActiveSigningGrantForBusiness({
+        businessId,
+        requestedBy: "owner",
+        reason: "policy_activated",
+      });
+    } catch (error) {
+      signingGrantWarning =
+        error instanceof Error ? error.message : "signing_grant_provision_failed";
+    }
+
     logAudit({
       actor: "owner",
       action: "policy_activated",
@@ -43,10 +64,12 @@ export async function POST(
       businessId,
       metadata: {
         policyId: policy.id,
+        signingGrantId: signingGrant?.zendfiSigningGrantId,
+        signingGrantWarning,
       },
     });
 
-    return NextResponse.json({ success: true, policy }, { status: 201 });
+    return NextResponse.json({ success: true, policy, signingGrant, signingGrantWarning }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       {
